@@ -1,0 +1,15 @@
+{
+    "db"       : "librepoll.sqlite",
+    "host"     : "localhost",
+    "port"     : 8081,
+    "security" : "cookies",
+    "api"      : "true",
+    "ui"       : "true",
+    "stdout"   : "true",
+    "log"      : "librepoll.log",
+    "comment"  : "## This is LibrePoll !\n
+\n
+ 1. Create new poll\n
+ 2. Add options\n
+ 3. Share the links\n"
+}
