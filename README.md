@@ -3,6 +3,8 @@ LibrePoll
 
 Free opinion poll service.
 
+![example](doc/example.png)
+
 ---
 
 ## Dependencies
