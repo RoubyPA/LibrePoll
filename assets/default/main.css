@@ -50,6 +50,11 @@ code {
     font-family: "Lucida Console", monospace;
 }
 
+input {
+    margin-top: 5px;
+    margin-left: 15px;
+}
+
 img {
     padding: 5%;
     max-width: 100%;
