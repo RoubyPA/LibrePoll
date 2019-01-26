@@ -530,9 +530,29 @@ string format."
         `((content-type . (text/html))
           ,cookie))))
 
+(define mime-type
+  '(("jpeg" . (image/jpeg))
+    ("jpg"  . (image/jpeg))
+    ("png"  . (image/png))
+    ("gif"  . (image/gif))
+    ("css"  . (text/css))
+    ("html" . (text/html))
+    (#f     . (text/plain))))
+
+(define (content-type file)
+  (let* ((extention (car (last-pair (string-split file #\.))))
+         (type (assoc-ref mime-type extention)))
+    type))
+
 ;;;
 ;;; Handler
 ;;;
+
+(define (ret-error path code message)
+  (values `((content-type . (text/html))
+            (status . ,code))
+          (sxml->html `(h1 ,(string-append
+                             code " - " message)))))
 
 (define-syntax-rule (define-handler-matcher name bool fun)
   "Define new function NAME coresponding to FUN if BOOL is true. Else
@@ -541,9 +561,7 @@ define function NAME who returns error."
     (if bool
         fun
         (λ (path request-body cookies)
-          (values (json-headers cookies)
-                  (scm->json-string '(("error" . "Not found")
-                                      ("error_code" . "404"))))))))
+          (ret-error path "404" "Not found")))))
 (define-handler-matcher get-api
   API
   (λ (path request-body cookies)
@@ -591,10 +609,7 @@ define function NAME who returns error."
                                      ("status" . "voted"))))))
       ;; Else
       (x
-       (log "error invalid path !")
-       (values (json-headers cookies)
-               (scm->json-string '(("error" . "Not found")
-                                   ("error_code" . "404"))))))))
+       (ret-error path "404" "Not found")))))
 
 (define-handler-matcher post-api
   API
@@ -623,9 +638,7 @@ define function NAME who returns error."
          (values (json-headers cookies)
                  (scm->json-string options))))
       (x
-       (values (json-headers cookies)
-               (scm->json-string '(("error" . "Not found")
-                                   ("error_code" . "404"))))))))
+       (ret-error path "404" "Not found")))))
 
 (define-handler-matcher get-ui
   UI
@@ -637,10 +650,14 @@ define function NAME who returns error."
            ())
        (values (html-headers cookies)
                (render-page-index)))
-      ;; /assets/:theme/main.css
+      ;; /assets/:theme/:file
       (("assets" theme file)
-       (values `((content-type . (text/css)))
-               (file-content (string-append "assets/" theme "/" file))))
+       (let ((ct (content-type file))
+             (file (string-append "assets/" theme "/" file)))
+         (if (file-exists? file)
+             (values `((content-type . ,ct))
+                     (file-content file))
+             (ret-error path "404" "Not found"))))
       ;; /result/:poll-id
       (("result" poll)
        (values (html-headers cookies)
@@ -655,10 +672,7 @@ define function NAME who returns error."
                (render-page-create-poll-get)))
       ;; Else
       (x
-       (log "error invalid path !")
-       (values (json-headers cookies)
-               (scm->json-string '(("error" . "Not found")
-                                   ("error_code" . "404"))))))))
+       (ret-error path "404" "Not found")))))
 
 (define-handler-matcher post-ui
   UI
@@ -685,15 +699,16 @@ define function NAME who returns error."
       (("create")
        (let* ((body (decode-post-uri-body request-body))
               (name (assoc-ref body "name"))
-              (desc (assoc-ref body "description"))
-              (sql-return (sql-create-poll  `(,name ,desc)))
-              (id   (sql-poll-by-name `(,name))))
-         (values (html-headers cookies)
-                 (render-page-add-option (number->string id)))))
+              (desc (assoc-ref body "description")))
+         (if (string-null? name)
+             (values (html-headers cookies)
+                     (render-page-create-poll-get))
+             (let* ((sql-return (sql-create-poll  `(,name ,desc)))
+                    (id   (sql-poll-by-name `(,name))))
+               (values (html-headers cookies)
+                       (render-page-add-option (number->string id)))))))
       (x
-       (values (json-headers cookies)
-               (scm->json-string '(("error" . "Not found")
-                                   ("error_code" . "404"))))))))
+       (ret-error path "404" "Not found")))))
 
 (define (my-handler request request-body)
   (define request-path
@@ -706,23 +721,27 @@ define function NAME who returns error."
                (request-method request)
                request-path))
 
-  (let ((path (remove string-null? (string-split request-path #\/))))
-    (match (request-method request)
-      ('GET
-       (match path
-         (("api" "v1" rest)
-          (get-api path request-body cookies))
-         (x
-          (get-ui path request-body cookies))))
-      ('POST
-       (match path
-         (("api" "v1" rest)
-          (post-api path request-body cookies))
-         (x
-          (post-ui path request-body cookies))))
-      (_
-       (values '((content-type . (text/plain)))
-               "404 not found")))))
+  (catch #t
+    (λ ()
+      (let ((path (remove string-null? (string-split request-path #\/))))
+        (match (request-method request)
+          ('GET
+           (match path
+             (("api" "v1" rest)
+              (get-api path request-body cookies))
+             (x
+              (get-ui path request-body cookies))))
+          ('POST
+           (match path
+             (("api" "v1" rest)
+              (post-api path request-body cookies))
+             (x
+              (post-ui path request-body cookies))))
+          (_
+           (ret-error path "404" "Not found")))))
+    (λ (key . args)
+      (log (format "error: ~a ~a" key args))
+      (ret-error "" "500" "Internal server error"))))
 
 ;;;
 ;;; Run server
