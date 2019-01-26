@@ -1,0 +1,87 @@
+/* main.css -- Default LibrePoll css style.
+ *
+ * Copyright (C) 2019 by Pierre-Antoine Rouby <contact@parouby.fr>
+ */
+
+body {
+    color: #212121;
+    background-color: #fcfcff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+h1 {
+    color: #e12121;
+    text-align: center;
+}
+
+a {
+    color: #e12121;
+}
+
+a:hover {
+    color: #5c5c5c;
+}
+
+table {
+    border: 1px solid #444444;
+    border-radius: 5px;
+    margin: 10px;
+    padding: 5px;
+    text-align: center;
+}
+
+th, td {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+code {
+    /* Color */
+    color: #fcfcff;
+    background-color: #212121;
+    /* Block display */
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 600px;
+    padding: 15px;
+    /* Font */
+    font-size: small;
+    font-family: "Lucida Console", monospace;
+}
+
+img {
+    padding: 5%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    box-shadow: 6px 6px 6px #444444;
+}
+
+footer {
+    width: 100%;
+    bottom: 5px;
+    position: fixed;
+    text-align: center;
+    background-color: #fcfcff;
+}
+
+/* Class */
+.result {
+    font-weight: bold;
+}
+
+.result-maj {
+    color: #e12121;
+    font-weight: bold;
+}
+
+.name {
+    border-bottom: 1px dashed #5c5c5c;
+}
+
+.description {
+    text-align: justify;
+    border-bottom: 1px dashed #5c5c5c;
+}

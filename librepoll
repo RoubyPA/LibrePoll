@@ -86,6 +86,8 @@
 (define UI       (string= (hash-ref conf "ui")  "true"))
 (define LOG-FILE (hash-ref conf "log"))
 (define STDOUT   (string= (hash-ref conf "stdout") "true"))
+(define TITLE    (hash-ref conf "title"))
+(define THEME    (hash-ref conf "theme"))
 (define COMMENT  (hash-ref conf "comment"))
 
 ;;;
@@ -242,11 +244,13 @@ string format."
             (string-split (utf8->string body) #\&))))
 
 (define (percent num total)
-  (let ((cur (* (/ num total) 100.0)))
-    (string-append (number->string (/ (round (* cur 100))
-                                      100.0)) "%")))
+  (cond
+   ((zero? total) 0)
+   (else
+    (let ((cur (* (/ num total) 100.0)))
+      (/ (round (* cur 100)) 100.0)))))
 
-(define (randon-number)
+(define (random-number)
   (random (+ (vector-ref (times) 0)
              (vector-ref (times) 1))))
 
@@ -332,7 +336,7 @@ string format."
   "Insert new poll in db."
   'nil
   "INSERT INTO poll (name,description,creation_date)
-     VALUES(~s, ~s ,DATETIME('now'));")
+     VALUES(~s, '~a' ,DATETIME('now'));")
 
 (define-sql-request-format
   sql-create-option-for-poll
@@ -346,9 +350,30 @@ string format."
 ;;;
 
 (define (sxml->html sxml)
-  (call-with-output-string
-    (lambda (port)
-      (sxml->xml sxml port))))
+  (let ((page `((html
+                 (head
+                  (meta (@ (charset "utf-8")))
+                  (title ,TITLE)
+                  (link (@ (rel "stylesheet")
+                           (href ,(string-append "/assets/" THEME "/main.css")))))
+                 (body
+                  ,sxml
+                  (footer
+                   (strong "LibrePoll")
+                   (br)
+                   "License: "
+                   (a (@ (href
+                          "https://www.gnu.org/licenses/agpl-3.0.txt"))
+                      "AGPL")
+                   (br)
+                   "Source code: "
+                   (a (@ (href
+                          "https://framagit.org/prouby/librepoll"))
+                      "Framagit")
+                   (br)))))))
+    (call-with-output-string
+      (lambda (port)
+        (sxml->xml page port)))))
 
 (define (poll-info id)
   (let* ((poll (sql-poll-by-id `(,id)))
@@ -381,42 +406,52 @@ string format."
                                           (value "Submit"))))))))))
 
 (define (render-page-add-option poll)
-  (sxml->html
-   `((h1 "Add options")
-     (form
-      (@ (action ,(string-append "/add_option/" poll))
-         (method "post"))
-      "Option " (input (@ (type "text")
-                          (name "name")))
-      (br) (br)
-      (input (@ (type "submit")
-                (value "Add"))))
-     (ul
-      (li "Vote links: "(a
-                         (@ (href ,(string-append "/poll/" poll)))
-                         ,(string-append "/poll/" poll)))
-      (li "Result links: "(a
-                           (@ (href ,(string-append "/result/" poll)))
-                           ,(string-append "/result/" poll)))))))
+  (let ((options (sql-options-for-poll `(,poll))))
+    (sxml->html
+     `((h1 "Add options")
+       (ul
+        ,(map (λ (l) `(li ,(cadr l))) options))
+       (form
+        (@ (action ,(string-append "/add_option/" poll))
+           (method "post"))
+        "Option " (input (@ (type "text")
+                            (name "name")))
+        (br) (br)
+        (input (@ (type "submit")
+                  (value "Add"))))
+       (ul
+        (li "Vote links: "(a
+                           (@ (href ,(string-append "/poll/" poll)))
+                           ,(string-append "/poll/" poll)))
+        (li "Result links: "(a
+                             (@ (href ,(string-append "/result/" poll)))
+                             ,(string-append "/result/" poll))))))))
 
 (define (render-page-result poll)
   (let-values (((name desc) (poll-info poll)))
     (let* ((fn (λ (l)
-                 (let ((num (sql-vote-num-for-option
-                             `(,(car l))))
-                       (total (sql-vote-number-by-poll
-                               `(,poll))))
-                   `((tr (td ,(cadr l))
-                         (td ,(if (not (zero? total))
-                                  (percent num total)
-                                  "0%"))
-                         (td ,num))))))
+                 (let* ((num (sql-vote-num-for-option
+                              `(,(car l))))
+                        (total (sql-vote-number-by-poll
+                                `(,poll)))
+                        (perc (percent num total))
+                        (perc-str (string-append (number->string perc) "%")))
+                   `((tr (td (div (@ (class ,(if (> perc 50)
+                                                 "result-maj"
+                                                 "result")))
+                                  ,(cadr l)))
+                         (td ,num)
+                         (td (div (@ (class ,(if (> perc 50)
+                                                 "result-maj"
+                                                 "result")))
+                                  ,perc-str)))))))
            (opts (sql-options-for-poll `(,poll)))
            (opth (map fn opts)))
-      (sxml->html `((h1 ,name)
-                    ,(commonmark->sxml desc)
+      (sxml->html `((div (@ (class "name"))
+                         (h1 ,name))
+                    (div (@ (class "description"))
+                         ,(commonmark->sxml desc))
                     (table
-                     (@ (style "border: 1px solid black;"))
                      (tr
                       (th "Option")
                       (th "Result")
@@ -471,7 +506,7 @@ string format."
                                    (car (acons (car l) (cadr l) '()))))
                                split-point)))
         (assoc-ref split-equal "librepoll_auth"))
-      (number->string (randon-number))))
+      (number->string (random-number))))
 
 (define (addon-headers cookies)
   (if (not (cookie-exists? cookies))
@@ -602,6 +637,10 @@ define function NAME who returns error."
            ())
        (values (html-headers cookies)
                (render-page-index)))
+      ;; /assets/:theme/main.css
+      (("assets" theme file)
+       (values `((content-type . (text/css)))
+               (file-content (string-append "assets/" theme "/" file))))
       ;; /result/:poll-id
       (("result" poll)
        (values (html-headers cookies)
