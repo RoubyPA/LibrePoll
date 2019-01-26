@@ -1,0 +1,15 @@
+# Scheme
+*.ss~
+*.ss#*
+.#*.ss
+
+*.scm~
+*.scm#*
+.#*.scm
+
+# Emacs
+*.elc
+*~
+
+# Sqlite
+*.sqlite
