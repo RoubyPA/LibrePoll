@@ -390,7 +390,7 @@ string format."
            (throw 'substitute-error '(str old new))))
         str)))
 
-(define (substitute-code-html enc)
+(define (substitute-code-html xml)
   "Substitute HTML Character Entities to character."
   (define (aux str l)
     (cond
@@ -400,12 +400,17 @@ string format."
         ((o . n) (aux (substitute str o n) (cdr l)))
         (_ (throw 'decode-html `(l)))))
      (else (throw 'decode-html `(l)))))
-  (aux enc '(("&lt;" . "<")
-             ("&gt;" . ">")
-             ("&quot;" . "\"")
-             ("&amp;" . "&")
-             ("&apos;" . "'")
-             ("&nbsp;" . " "))))
+
+  (let* ((i (cdr (vector-ref (string-match "<code" xml) 1)))
+         (j (car (vector-ref (string-match "</code>" xml) 1)))
+         (enc (substring xml i j))
+         (str (aux enc '(("&lt;" . "<")
+                         ("&gt;" . ">")
+                         ("&quot;" . "\"")
+                         ("&amp;" . "&")
+                         ("&apos;" . "'")
+                         ("&nbsp;" . " ")))))
+    (string-replace xml str i j)))
 
 (define (sxml->html sxml)
   (let ((page `((html
