@@ -9,7 +9,7 @@ Free opinion poll service.
 
 ## Dependencies
 
- - Guile <= 2.2
+ - Guile >= 2.2
  - Guile-json
  - Guile-sqlite3
  - Guile-commonmark
