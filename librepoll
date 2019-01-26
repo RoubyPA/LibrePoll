@@ -415,7 +415,8 @@ string format."
                   (link (@ (rel "stylesheet")
                            (href ,(string-append "/assets/" THEME "/main.css")))))
                  (body
-                  ,sxml
+                  (div (@ (class "core"))
+                       ,sxml)
                   (footer
                    (strong "LibrePoll")
                    (br)
@@ -452,7 +453,7 @@ string format."
                             "Create new poll")))))))
 
 (define (render-page-create-poll-get)
-  (sxml->html `((h1 "Create new poll")
+  (sxml->html `((header (h1 "Create new poll"))
                 (form
                  (@ (action "/create")
                     (method "post"))
@@ -470,7 +471,7 @@ string format."
 (define (render-page-add-option poll)
   (let ((options (sql-options-for-poll `(,poll))))
     (sxml->html
-     `((h1 "Add options")
+     `((header (h1 "Add options"))
        (ul
         ,(map (λ (l) `(li ,(cadr l))) options))
        (form

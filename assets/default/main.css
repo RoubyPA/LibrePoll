@@ -43,7 +43,7 @@ code {
     display: inline-block;
     margin-left: auto;
     margin-right: auto;
-    width: 600px;
+    width: 700px;
     padding: 15px;
     /* Font */
     font-size: small;
@@ -64,15 +64,25 @@ img {
     box-shadow: 6px 6px 6px #444444;
 }
 
+header {
+    border-bottom: 1px dashed #5c5c5c;
+}
+
 footer {
     width: 100%;
-    bottom: 5px;
+    bottom: 0px;
+    padding: 5px;
     position: fixed;
     text-align: center;
     background-color: #fcfcff;
+    border-top: 1px dashed #5c5c5c;
 }
 
 /* Class */
+.core {
+    padding-bottom: 200px;
+}
+
 .result {
     font-weight: bold;
 }
