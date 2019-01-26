@@ -1,3 +1,6 @@
+#!/bin/guile \
+--no-auto-compile -s
+!#
 ;;; LibrePoll -- Free opinion poll service.        -*- mode: scheme -*-
 ;;;
 ;;; Copyright (C) 2018 Pierre-Antoine Rouby <contact@parouby.fr>
@@ -565,6 +568,7 @@ define function NAME who returns error."
         fun
         (λ (path request-body cookies)
           (ret-error path "404" "Not found")))))
+
 (define-handler-matcher get-api
   API
   (λ (path request-body cookies)
