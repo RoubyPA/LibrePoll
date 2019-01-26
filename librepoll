@@ -471,8 +471,10 @@ string format."
          (opts (sql-options-for-poll `(,id)))
          (opth (map fn opts)))
     (sxml->html
-     `((h1 ,name)
-       ,(commonmark->sxml desc)
+     `((div (@ (class "name"))
+            (h1 ,name))
+       (div (@ (class "description"))
+            ,(commonmark->sxml desc))
        (form
         (@ (action
             ,(string-append
