@@ -43,6 +43,8 @@ By default LibrePoll use `librepoll.json` as configuation file.
 | ui       | Make ui available ("true" or "false")                       |
 | stdout   | Display log in stdout ("true" or "false")                   |
 | log      | Log file                                                    |
+| title    | Page title                                                  |
+| theme    | Style to use                                                |
 | comment  | Server comment (for display)                                |
 
 
@@ -56,6 +58,8 @@ By default LibrePoll use `librepoll.json` as configuation file.
     "ui"       : "true",
     "stdout"   : "true",
     "log"      : "librepoll.log",
+    "title"    : "LibrePoll",
+    "theme"    : "default",
     "comment"  : "## This is LibrePoll !\n
 \n
  1. Create new poll\n
