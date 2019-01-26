@@ -387,7 +387,8 @@ string format."
       (sxml->html `((h1 "Welcome in LibrePoll !")
                     ,(commonmark->sxml COMMENT)
                     (ul
-                     (li (a (@ (href "/create")) "New poll")))))))
+                     (li (a (@ (href "/create"))
+                            "Create new poll")))))))
 
 (define (render-page-create-poll-get)
   (sxml->html `((h1 "Create new poll")
