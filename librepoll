@@ -27,6 +27,8 @@
              (srfi srfi-28)
              (srfi srfi-11)
              ;; Html & Markdown
+             (syntax-highlight)
+             (syntax-highlight scheme)
              (sxml simple)
              (commonmark)
              ;; Web
@@ -222,8 +224,15 @@ string format."
   (define (name lst)
     DOCSTRING
     (let* ((core (λ (lst)
-                   (exec-sql->list default-db (apply format
-                                                     (cons sql-format lst)))))
+                   (exec-sql->list default-db
+                                   (apply format
+                                          (cons sql-format
+                                                (map (λ (s)
+                                                       (if (string? s)
+                                                           (substitute s "'"
+                                                                       "&apos;")
+                                                           s))
+                                                     lst))))))
            ;; Wrap core with parser if parser is define.
            (exec (cond
                   ((procedure? parser)
@@ -353,6 +362,51 @@ string format."
 ;;; Render
 ;;;
 
+(define (highlight-scheme code)
+  (define (sxml->xml-string sxml)
+    (call-with-output-string
+      (λ (port)
+        (sxml->xml sxml port))))
+
+  (if (not (equal? (string-match "```scheme" code) #f))
+      (let* ((index   (cdr (vector-ref (string-match "```scheme" code) 1)))
+             (str     (substring code index))
+             (index2  (car (vector-ref (string-match "```" str) 1)))
+             (str2    (substring str 0 index2))
+             (xml (sxml->xml-string
+                   (highlight lex-scheme str2))))
+        (string-replace code xml index (+ index index2)))
+      code))
+
+(define (substitute str old new)
+  "Replace OLD with NEW in STR."
+  (let ((vstr (string-match old str)))
+    (if (not (equal? vstr #f))
+        (match (vector-ref vstr 1)
+          ((s . e)
+           (substitute (string-replace str new s e)
+                       old new))
+          (x
+           (throw 'substitute-error '(str old new))))
+        str)))
+
+(define (substitute-code-html enc)
+  "Substitute HTML Character Entities to character."
+  (define (aux str l)
+    (cond
+     ((null-list? l) str)
+     ((list? l)
+      (match (car l)
+        ((o . n) (aux (substitute str o n) (cdr l)))
+        (_ (throw 'decode-html `(l)))))
+     (else (throw 'decode-html `(l)))))
+  (aux enc '(("&lt;" . "<")
+             ("&gt;" . ">")
+             ("&quot;" . "\"")
+             ("&amp;" . "&")
+             ("&apos;" . "'")
+             ("&nbsp;" . " "))))
+
 (define (sxml->html sxml)
   (let ((page `((html
                  (head
@@ -375,9 +429,12 @@ string format."
                           "https://framagit.org/prouby/librepoll"))
                       "Framagit")
                    (br)))))))
-    (call-with-output-string
-      (lambda (port)
-        (sxml->xml page port)))))
+    (let ((html (call-with-output-string
+                  (lambda (port)
+                    (sxml->xml page port)))))
+      (if (not (equal? #f (string-match "class=\"language-scheme\"" html)))
+          (substitute-code-html html)
+          html))))
 
 (define (poll-info id)
   (let* ((poll (sql-poll-by-id `(,id)))
@@ -389,7 +446,7 @@ string format."
   (if (file-exists? "index.html")
       (file-content "index.html")
       (sxml->html `((h1 "Welcome in LibrePoll !")
-                    ,(commonmark->sxml COMMENT)
+                    ,(commonmark->sxml (highlight-scheme COMMENT))
                     (ul
                      (li (a (@ (href "/create"))
                             "Create new poll")))))))
@@ -454,12 +511,12 @@ string format."
       (sxml->html `((div (@ (class "name"))
                          (h1 ,name))
                     (div (@ (class "description"))
-                         ,(commonmark->sxml desc))
+                         ,(commonmark->sxml (highlight-scheme desc)))
                     (table
                      (tr
-                      (th "Option")
-                      (th "Result")
-                      (th "Vote"))
+                      (th "Options")
+                      (th "Votes")
+                      (th "Results"))
                      ,opth))))))
 
 (define (render-page-poll id)
@@ -478,7 +535,7 @@ string format."
      `((div (@ (class "name"))
             (h1 ,name))
        (div (@ (class "description"))
-            ,(commonmark->sxml desc))
+            ,(commonmark->sxml (highlight-scheme desc)))
        (form
         (@ (action
             ,(string-append
@@ -555,6 +612,7 @@ string format."
 ;;;
 
 (define (ret-error path code message)
+  (log (string-append "http: " code " - " message))
   (values `((content-type . (text/html))
             (status . ,code))
           (sxml->html `(h1 ,(string-append

@@ -90,3 +90,18 @@ footer {
     text-align: justify;
     border-bottom: 1px dashed #5c5c5c;
 }
+
+/* Code highlight */
+special {
+    color: #db2121;
+    font-weight: bold;
+}
+
+string {
+    color: #70a0f2;
+}
+
+comment {
+    color: #acacac;
+    font-style: italic;
+}
