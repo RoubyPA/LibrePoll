@@ -74,6 +74,11 @@
            (throw 'substitute-error '(str old new))))
         str)))
 
+(define (sxml->xml-string sxml)
+  (call-with-output-string
+    (λ (port)
+      (sxml->xml sxml port))))
+
 ;;;
 ;;; Configuration
 ;;;
@@ -137,6 +142,7 @@
 
 (define (create-db db file)
   (define (sql-request sql)
+    (log (format "createdb: ~a" sql))
     (let ((stmt (sqlite-prepare db sql)))
         (sqlite-fold cons '() stmt)))
 
@@ -168,11 +174,15 @@
    );")
 
   (sql-request
-   "INSERT INTO poll (id,name,description,creation_date)
+   (format "INSERT INTO poll (id,name,description,creation_date)
      VALUES (
        1,
        'Do you like this software ?',
-       'This program is free software, licensed under
+       '~a',
+       DATETIME('now') );"
+           (sxml->xml-string
+            (commonmark->sxml
+             "This program is free software, licensed under
 [AGPL](http://www.gnu.org/licenses/).
 
 ```
@@ -190,8 +200,7 @@ You should have received a copy of the GNU Affero General Public
 License along with this program.  If not, see
 <http://www.gnu.org/licenses/>.
 ```
-',
-       DATETIME('now') );")
+"))))
 
   (sql-request
    "INSERT INTO option (poll,name)
@@ -377,11 +386,6 @@ string format."
 ;;;
 ;;; Render
 ;;;
-
-(define (sxml->xml-string sxml)
-  (call-with-output-string
-    (λ (port)
-      (sxml->xml sxml port))))
 
 (define (highlight-scheme code)
   (if (not (equal? (string-match "```scheme" code) #f))
