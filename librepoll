@@ -434,8 +434,7 @@ string format."
                   (link (@ (rel "stylesheet")
                            (href ,(string-append "/assets/" THEME "/main.css")))))
                  (body
-                  (div (@ (class "core"))
-                       ,sxml)
+                  ,sxml
                   (footer
                    (strong "LibrePoll")
                    (br)
@@ -465,52 +464,56 @@ string format."
       (file-content "index.html")
       (sxml->html `((header
                      (h1 "Welcome in LibrePoll !"))
-                    (div (@ (class "description"))
-                         ,(commonmark->sxml COMMENT))
-                    (h2 "Create new poll")
-                    (ul
-                     (li (a (@ (href ,(string-append HOST "/create")))
-                            "Click here")))
-                    (h2 "Statistique")
-                    (p "There are " (strong ,(sql-vote-count) " votes")
-                       " on this instance." (br)
-                       "There are " (strong ,(sql-poll-count) " polls")
-                       " on this instance.")))))
+                    (div (@ (class "core"))
+                         (div (@ (class "description"))
+                              ,(commonmark->sxml COMMENT))
+                         (h2 "Create new poll")
+                         (ul
+                          (li (a (@ (href ,(string-append HOST "/create")))
+                                 "Click here")))
+                         (h2 "Statistique")
+                         (p "There are " (strong ,(sql-vote-count) " votes")
+                            " on this instance." (br)
+                            "There are " (strong ,(sql-poll-count) " polls")
+                            " on this instance."))))))
 
 (define (render-page-create-poll-get)
   (sxml->html `((header (h1 "Create new poll"))
-                (form
-                 (@ (action "/create")
-                    (method "post"))
-                 (table (tr (td "Name")
-                            (td (input (@ (type "text")
-                                          (name "name")))))
-                        (tr (td "Description ")
-                            (td (textarea (@ (name "description")
-                                             (row  "24")
-                                             (cols "82"))
-                                          "")))
-                        (tr (td (input (@ (type "submit")
-                                          (value "Submit"))))))))))
+                (div (@ (class "core"))
+                     (form
+                      (@ (action "/create")
+                         (method "post"))
+                      (table (tr (td
+                                  "Name" (br)
+                                  (input (@ (type "text")
+                                            (name "name")))))
+                             (tr (td
+                                  "Description" (br)
+                                  (textarea (@ (name "description")
+                                               (rows "24"))
+                                            "")))
+                             (tr (td (input (@ (type "submit")
+                                               (value "Submit")))))))))))
 
 (define (render-page-add-option poll)
   (let ((options (sql-options-for-poll `(,poll))))
     (sxml->html
      `((header (h1 "Add options"))
-       (ul
-        ,(map (λ (l) `(li ,(cadr l))) options))
-       (form
-        (@ (action ,(string-append "/add_option/" poll))
-           (method "post"))
-        "Option " (input (@ (type "text")
-                            (name "name")))
-        (br) (br)
-        (input (@ (type "submit")
-                  (value "Add"))))
-       (h2 (a
-            (@ (href ,(string-append HOST "/poll/" poll)))
-            ,(string-append HOST
-                            "/poll/" poll)))))))
+       (div (@ (class "core"))
+            (ul
+             ,(map (λ (l) `(li ,(cadr l))) options))
+            (form
+             (@ (action ,(string-append "/add_option/" poll))
+                (method "post"))
+             "Option " (input (@ (type "text")
+                                 (name "name")))
+             (br) (br)
+             (input (@ (type "submit")
+                       (value "Add"))))
+            (h2 (a
+                 (@ (href ,(string-append HOST "/poll/" poll)))
+                 ,(string-append HOST
+                                 "/poll/" poll))))))))
 
 (define (render-page-result poll)
   (let-values (((name desc) (poll-info poll)))
@@ -532,16 +535,16 @@ string format."
            (opts (sql-options-for-poll `(,poll)))
            (opth (map fn opts)))
       (substitute
-       (sxml->html `((div (@ (class "name"))
-                          (h1 ,name))
-                     (div (@ (class "description"))
-                          "@poll-description@")
-                     (table
-                      (tr
-                       (th "Options")
-                       (th "Votes")
-                       (th "Results"))
-                      ,opth)))
+       (sxml->html `((header (h1 ,name))
+                     (div (@ (class "core"))
+                          (div (@ (class "description"))
+                               "@poll-description@")
+                          (table
+                           (tr
+                            (th "Options")
+                            (th "Votes")
+                            (th "Results"))
+                           ,opth))))
        "@poll-description@" desc))))
 
 (define (render-page-poll id)
@@ -558,19 +561,19 @@ string format."
          (opth (map fn opts)))
     (substitute
      (sxml->html
-      `((div (@ (class "name"))
-             (h1 ,name))
-        (div (@ (class "description"))
-             "@poll-description@")
-        (form
-         (@ (action
-             ,(string-append
-               "/result/" id))
-            (method "post"))
-         ,opth
-         (br)
-         (input (@ (type  "submit")
-                   (value "Vote"))))))
+      `((header (h1 ,name))
+        (div (@ (class "core"))
+             (div (@ (class "description"))
+                  "@poll-description@")
+             (form
+              (@ (action
+                  ,(string-append
+                    "/result/" id))
+                 (method "post"))
+              ,opth
+              (br)
+              (input (@ (type  "submit")
+                        (value "Vote")))))))
      "@poll-description@" desc)))
 
 ;;;

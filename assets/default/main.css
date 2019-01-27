@@ -3,15 +3,22 @@
  * Copyright (C) 2019 by Pierre-Antoine Rouby <contact@parouby.fr>
  */
 
-body {
+html {
+    font-size: 1.30em;
     color: #212121;
     background-color: #fcfcff;
     font-family: Arial, Helvetica, sans-serif;
 }
 
+body {
+    margin: 0px;
+}
+
 h1 {
     color: #e12121;
     text-align: center;
+    margin: 0px;
+    padding: 15px;
 }
 
 a {
@@ -30,10 +37,18 @@ p {
 table {
     border: 1px solid #444444;
     border-radius: 5px;
-    margin: 10px;
+    margin: auto;
+    margin-top: 15px;
+    width: 60%;
     padding: 5px;
+    /* display: block; */
     text-align: center;
     box-shadow: 3px 3px 5px #444444;
+}
+
+input, textarea {
+    margin-top: 5px;
+    width: 100%;
 }
 
 th, td {
@@ -57,11 +72,6 @@ code {
     font-family: "Lucida Console", monospace;
 }
 
-input {
-    margin-top: 5px;
-    margin-left: 15px;
-}
-
 img {
     padding: 5%;
     max-width: 100%;
@@ -72,6 +82,9 @@ img {
 }
 
 header {
+    background-color: #fcfcff;
+    position: sticky;
+    top: 0;
     border-bottom: 1px dashed #5c5c5c;
 }
 
@@ -81,6 +94,7 @@ footer {
     padding: 5px;
     position: fixed;
     text-align: center;
+    font-size: 0.70em;
     background-color: #fcfcff;
     border-top: 1px dashed #5c5c5c;
 }
@@ -88,6 +102,9 @@ footer {
 /* Class */
 .core {
     padding-bottom: 200px;
+    margin-left: 15%;
+    margin-right: 15%;
+    max-width: 700px;
 }
 
 .result {
