@@ -46,7 +46,11 @@ table {
     box-shadow: 3px 3px 5px #444444;
 }
 
-input, textarea {
+input {
+    margin-top: 5px;
+}
+
+textarea {
     margin-top: 5px;
     width: 100%;
 }
@@ -104,7 +108,17 @@ footer {
     padding-bottom: 200px;
     margin-left: 15%;
     margin-right: 15%;
-    max-width: 700px;
+    min-width: 700px;
+}
+
+.option {
+    width: 100%;
+    text-align: center;
+}
+
+.link {
+    width: 100%;
+    text-align: center;
 }
 
 .result {

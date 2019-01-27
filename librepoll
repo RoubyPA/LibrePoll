@@ -500,20 +500,23 @@ string format."
     (sxml->html
      `((header (h1 "Add options"))
        (div (@ (class "core"))
-            (ul
-             ,(map (λ (l) `(li ,(cadr l))) options))
+            ,(map (λ (l) `(div (@ (class "option"))
+                               ,(cadr l)))
+                  options)
             (form
              (@ (action ,(string-append "/add_option/" poll))
                 (method "post"))
-             "Option " (input (@ (type "text")
-                                 (name "name")))
-             (br) (br)
-             (input (@ (type "submit")
-                       (value "Add"))))
-            (h2 (a
-                 (@ (href ,(string-append HOST "/poll/" poll)))
-                 ,(string-append HOST
-                                 "/poll/" poll))))))))
+             (table (tr
+                     (td "Option")
+                     (td (input (@ (type "text")
+                                   (name "name"))))
+                     (td (input (@ (type "submit")
+                                   (value "+")))))))
+            (div (@ (class "link"))
+                 (h2 (a
+                      (@ (href ,(string-append HOST "/poll/" poll)))
+                      ,(string-append HOST
+                                      "/poll/" poll)))))))))
 
 (define (render-page-result poll)
   (let-values (((name desc) (poll-info poll)))
@@ -549,11 +552,11 @@ string format."
 
 (define (render-page-poll id)
   (let* ((fn (λ (l)
-               `((input (@ (type "radio")
-                           (name "vote")
-                           (value ,(car l)))
-                        ,(cadr l))
-                 (br))))
+               `(tr
+                 (td (input (@ (type "radio")
+                               (name "vote")
+                               (value ,(car l)))
+                            ,(cadr l))))))
          (poll (sql-poll-by-id `(,id)))
          (name (list-ref poll 0))
          (desc (list-ref poll 1))
@@ -570,10 +573,11 @@ string format."
                   ,(string-append
                     "/result/" id))
                  (method "post"))
-              ,opth
-              (br)
-              (input (@ (type  "submit")
-                        (value "Vote")))))))
+              (table
+               ,opth
+               (tr
+                (td (input (@ (type  "submit")
+                              (value "Vote"))))))))))
      "@poll-description@" desc)))
 
 ;;;
