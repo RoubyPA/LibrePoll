@@ -316,6 +316,12 @@ string format."
   (λ (l) (caar l))
   "SELECT COUNT(*) FROM vote;")
 
+(define-sql-request
+  sql-poll-count
+  "Returns number of all poll in db."
+  (λ (l) (caar l))
+  "SELECT COUNT(*) FROM poll;")
+
 (define-sql-request-format
   sql-vote-number-by-poll
   "Count all vote for poll."
@@ -461,8 +467,15 @@ string format."
                      (h1 "Welcome in LibrePoll !"))
                     (div (@ (class "description"))
                          ,(commonmark->sxml COMMENT))
-                    (h2 (a (@ (href "/create"))
-                           "Create new poll"))))))
+                    (h2 "Create new poll")
+                    (ul
+                     (li (a (@ (href ,(string-append HOST "/create")))
+                            "Click here")))
+                    (h2 "Statistique")
+                    (p "There are " (strong ,(sql-vote-count) " votes")
+                       " on this instance." (br)
+                       "There are " (strong ,(sql-poll-count) " polls")
+                       " on this instance.")))))
 
 (define (render-page-create-poll-get)
   (sxml->html `((header (h1 "Create new poll"))
