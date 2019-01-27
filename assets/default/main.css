@@ -33,6 +33,7 @@ table {
     margin: 10px;
     padding: 5px;
     text-align: center;
+    box-shadow: 3px 3px 5px #444444;
 }
 
 th, td {
@@ -50,6 +51,7 @@ code {
     margin-right: auto;
     width: 700px;
     padding: 15px;
+    box-shadow: 3px 3px 5px #444444;
     /* Font */
     font-size: small;
     font-family: "Lucida Console", monospace;
@@ -66,7 +68,7 @@ img {
     margin-left: auto;
     margin-right: auto;
     position: relative;
-    box-shadow: 6px 6px 6px #444444;
+    box-shadow: 3px 3px 5px #444444;
 }
 
 header {
