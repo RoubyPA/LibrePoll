@@ -457,11 +457,12 @@ string format."
 (define (render-page-index)
   (if (file-exists? "index.html")
       (file-content "index.html")
-      (sxml->html `((h1 "Welcome in LibrePoll !")
-                    ,(commonmark->sxml COMMENT)
-                    (ul
-                     (li (a (@ (href "/create"))
-                            "Create new poll")))))))
+      (sxml->html `((header
+                     (h1 "Welcome in LibrePoll !"))
+                    (div (@ (class "description"))
+                         ,(commonmark->sxml COMMENT))
+                    (h2 (a (@ (href "/create"))
+                           "Create new poll"))))))
 
 (define (render-page-create-poll-get)
   (sxml->html `((header (h1 "Create new poll"))
