@@ -59,6 +59,22 @@
     (using))
 
 ;;;
+;;; String tools
+;;;
+
+(define (substitute str old new)
+  "Replace OLD with NEW in STR."
+  (let ((vstr (string-match old str)))
+    (if (not (equal? vstr #f))
+        (match (vector-ref vstr 1)
+          ((s . e)
+           (substitute (string-replace str new s e)
+                       old new))
+          (x
+           (throw 'substitute-error '(str old new))))
+        str)))
+
+;;;
 ;;; Configuration
 ;;;
 
@@ -362,12 +378,12 @@ string format."
 ;;; Render
 ;;;
 
-(define (highlight-scheme code)
-  (define (sxml->xml-string sxml)
-    (call-with-output-string
-      (λ (port)
-        (sxml->xml sxml port))))
+(define (sxml->xml-string sxml)
+  (call-with-output-string
+    (λ (port)
+      (sxml->xml sxml port))))
 
+(define (highlight-scheme code)
   (if (not (equal? (string-match "```scheme" code) #f))
       (let* ((index   (cdr (vector-ref (string-match "```scheme" code) 1)))
              (str     (substring code index))
@@ -377,18 +393,6 @@ string format."
                    (highlight lex-scheme str2))))
         (string-replace code xml index (+ index index2)))
       code))
-
-(define (substitute str old new)
-  "Replace OLD with NEW in STR."
-  (let ((vstr (string-match old str)))
-    (if (not (equal? vstr #f))
-        (match (vector-ref vstr 1)
-          ((s . e)
-           (substitute (string-replace str new s e)
-                       old new))
-          (x
-           (throw 'substitute-error '(str old new))))
-        str)))
 
 (define (substitute-code-html xml)
   "Substitute HTML Character Entities to character."
@@ -401,16 +405,12 @@ string format."
         (_ (throw 'decode-html `(l)))))
      (else (throw 'decode-html `(l)))))
 
-  (let* ((i (cdr (vector-ref (string-match "<code" xml) 1)))
-         (j (car (vector-ref (string-match "</code>" xml) 1)))
-         (enc (substring xml i j))
-         (str (aux enc '(("&lt;" . "<")
-                         ("&gt;" . ">")
-                         ("&quot;" . "\"")
-                         ("&amp;" . "&")
-                         ("&apos;" . "'")
-                         ("&nbsp;" . " ")))))
-    (string-replace xml str i j)))
+  (aux xml '(("&lt;" . "<")
+             ("&gt;" . ">")
+             ("&quot;" . "\"")
+             ("&amp;" . "&")
+             ("&apos;" . "'")
+             ("&nbsp;" . " "))))
 
 (define (sxml->html sxml)
   (let ((page `((html
@@ -438,9 +438,7 @@ string format."
     (let ((html (call-with-output-string
                   (lambda (port)
                     (sxml->xml page port)))))
-      (if (not (equal? #f (string-match "class=\"language-scheme\"" html)))
-          (substitute-code-html html)
-          html))))
+      html)))
 
 (define (poll-info id)
   (let* ((poll (sql-poll-by-id `(,id)))
@@ -452,7 +450,7 @@ string format."
   (if (file-exists? "index.html")
       (file-content "index.html")
       (sxml->html `((h1 "Welcome in LibrePoll !")
-                    ,(commonmark->sxml (highlight-scheme COMMENT))
+                    ,(commonmark->sxml COMMENT)
                     (ul
                      (li (a (@ (href "/create"))
                             "Create new poll")))))))
@@ -514,16 +512,18 @@ string format."
                                   ,perc-str)))))))
            (opts (sql-options-for-poll `(,poll)))
            (opth (map fn opts)))
-      (sxml->html `((div (@ (class "name"))
-                         (h1 ,name))
-                    (div (@ (class "description"))
-                         ,(commonmark->sxml (highlight-scheme desc)))
-                    (table
-                     (tr
-                      (th "Options")
-                      (th "Votes")
-                      (th "Results"))
-                     ,opth))))))
+      (substitute
+       (sxml->html `((div (@ (class "name"))
+                          (h1 ,name))
+                     (div (@ (class "description"))
+                          "@poll-description@")
+                     (table
+                      (tr
+                       (th "Options")
+                       (th "Votes")
+                       (th "Results"))
+                      ,opth)))
+       "@poll-description@" desc))))
 
 (define (render-page-poll id)
   (let* ((fn (λ (l)
@@ -537,20 +537,22 @@ string format."
          (desc (list-ref poll 1))
          (opts (sql-options-for-poll `(,id)))
          (opth (map fn opts)))
-    (sxml->html
-     `((div (@ (class "name"))
-            (h1 ,name))
-       (div (@ (class "description"))
-            ,(commonmark->sxml (highlight-scheme desc)))
-       (form
-        (@ (action
-            ,(string-append
-              "/result/" id))
-           (method "post"))
-        ,opth
-        (br)
-        (input (@ (type  "submit")
-                  (value "Vote"))))))))
+    (substitute
+     (sxml->html
+      `((div (@ (class "name"))
+             (h1 ,name))
+        (div (@ (class "description"))
+             "@poll-description@")
+        (form
+         (@ (action
+             ,(string-append
+               "/result/" id))
+            (method "post"))
+         ,opth
+         (br)
+         (input (@ (type  "submit")
+                   (value "Vote"))))))
+     "@poll-description@" desc)))
 
 ;;;
 ;;; Cookies !
@@ -774,8 +776,13 @@ define function NAME who returns error."
          (if (string-null? name)
              (values (html-headers cookies)
                      (render-page-create-poll-get))
-             (let* ((sql-return (sql-create-poll  `(,name ,desc)))
-                    (id   (sql-poll-by-name `(,name))))
+             (let* ((sql-return (sql-create-poll
+                                 `(,name
+                                   ,(substitute-code-html
+                                     (sxml->xml-string
+                                      (commonmark->sxml
+                                       (highlight-scheme desc)))))))
+                    (id (sql-poll-by-name `(,name))))
                (values (html-headers cookies)
                        (render-page-add-option (number->string id)))))))
       (x
