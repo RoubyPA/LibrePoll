@@ -125,11 +125,15 @@
   (let ((lfile
          (let ((port (open-output-file LOG-FILE)))
            (λ (message)
-             (write-line (format "~a librepoll: ~a"
-                                 (strftime "%b %d %H:%M:%S"
-                                           (localtime (current-time)))
-                                 message)
-                         port)))))
+             (let ((lines (string-split message #\newline)))
+               (map  (λ (l)
+                       (write-line
+                        (format "~a librepoll: ~a"
+                                (strftime "%b %d %H:%M:%S"
+                                          (localtime (current-time)))
+                                l)
+                        port))
+                     lines))))))
     (if STDOUT
         (λ (message)
           (display (format "~a\n" message))
