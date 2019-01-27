@@ -493,13 +493,10 @@ string format."
         (br) (br)
         (input (@ (type "submit")
                   (value "Add"))))
-       (ul
-        (li "Vote links: "(a
-                           (@ (href ,(string-append "/poll/" poll)))
-                           ,(string-append "/poll/" poll)))
-        (li "Result links: "(a
-                             (@ (href ,(string-append "/result/" poll)))
-                             ,(string-append "/result/" poll))))))))
+       (h2 (a
+            (@ (href ,(string-append HOST "/poll/" poll)))
+            ,(string-append HOST
+                            "/poll/" poll)))))))
 
 (define (render-page-result poll)
   (let-values (((name desc) (poll-info poll)))
@@ -833,4 +830,7 @@ define function NAME who returns error."
 ;;; Run server
 ;;;
 
+(log (string-append "server: ----------\n"
+                    "server: Run server\n"
+                    "server: ----------"))
 (run-server my-handler 'http `(#:port ,PORT))

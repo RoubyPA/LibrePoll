@@ -1,9 +1,9 @@
 {
     "db"       : "librepoll.sqlite",
-    "host"     : "localhost",
+    "host"     : "http://localhost:8081",
     "port"     : 8081,
     "security" : "cookies",
-    "api"      : "true",
+    "api"      : "false",
     "ui"       : "true",
     "stdout"   : "true",
     "log"      : "librepoll.log",
@@ -12,6 +12,6 @@
     "comment"  : "## This is LibrePoll !\n
 \n
  1. Create new poll\n
- 2. Add options\n
- 3. Share the links\n"
+ 2. Add option(s)\n
+ 3. Share the poll link\n"
 }
