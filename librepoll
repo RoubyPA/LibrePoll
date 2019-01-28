@@ -649,7 +649,7 @@ string format."
 ;;;
 
 (define (ret-error path code message)
-  (log (string-append "http: " code " - " message))
+  (log (string-append "http: " code " - " message " - " path))
   (values `((content-type . (text/html))
             (status . ,code))
           (sxml->html `(h1 ,(string-append
