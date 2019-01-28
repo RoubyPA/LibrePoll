@@ -3,9 +3,10 @@ LibrePoll
 
 Free opinion poll service.
 
-![example](doc/example.png)
 
----
+LibrePoll provide a web interface to create opinion poll with Markdown
+description.
+
 
 ## Dependencies
 
@@ -13,8 +14,10 @@ Free opinion poll service.
  - Guile-json
  - Guile-sqlite3
  - Guile-commonmark
+ - Guile-syntax-highlight
 
-## Run LibrePoll server
+
+## Test LibrePoll in sources
 
 Run librepoll with default configuration.
 
@@ -29,9 +32,28 @@ $ guile librepoll my/config/file.json
 ```
 
 
+## Install
+
+Use guix.
+
+```shell
+$ guix package -f guix
+```
+
+
+## Run
+
+After guix install.
+
+```shell
+$ librepoll [CONFIGFILE]
+```
+
+
 ## Configuration
 
-By default LibrePoll use `librepoll.json` as configuation file.
+By default LibrePoll use `librepoll.json` in current dir as
+configuation file.
 
 | Options  | Usage                                                       |
 |----------|-------------------------------------------------------------|
@@ -44,8 +66,8 @@ By default LibrePoll use `librepoll.json` as configuation file.
 | stdout   | Display log in stdout ("true" or "false")                   |
 | log      | Log file                                                    |
 | title    | Page title                                                  |
-| theme    | Style to use                                                |
-| comment  | Server comment (for display)                                |
+| theme    | Theme to use in html                                        |
+| comment  | Message to display in the index page (Markdown)             |
 
 
 ```json
@@ -60,10 +82,6 @@ By default LibrePoll use `librepoll.json` as configuation file.
     "log"      : "librepoll.log",
     "title"    : "LibrePoll",
     "theme"    : "default",
-    "comment"  : "## This is LibrePoll !\n
-\n
- 1. Create new poll\n
- 2. Add options\n
- 3. Share the links\n"
+    "comment"  : "Message to display in the index page."
 }
 ```
