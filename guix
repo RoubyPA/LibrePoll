@@ -1,0 +1,59 @@
+;;; guix --- LibrePoll guix package.                   -*- mode: scheme -*-
+;;; Copyright (C) 2019  Pierre-Antoine Rouby
+
+(use-modules ((guix licenses) #:prefix license:)
+             (guix packages)
+             (guix download)
+             (guix gexp)
+             (guix utils)
+             (guix build-system trivial)
+             (gnu packages)
+             (gnu packages guile)
+             (gnu packages guile-xyz))
+
+(package
+  (name "librepoll")
+  (version "0.0.0")
+  (source (local-file "." "librepoll" #:recursive? #t))
+  (build-system trivial-build-system)
+  (propagated-inputs
+   `(("guile" ,guile-2.2)
+     ("guile-json" ,guile-json)
+     ("guile-commonmark" ,guile-commonmark)
+     ("guile-sqlite3" ,guile-sqlite3)
+     ("guile-syntax-highlight" ,guile-syntax-highlight)))
+  (arguments
+   `(#:modules ((guix build utils))
+     #:builder
+     (begin
+       (use-modules (guix build utils))
+
+       (let* ((out (assoc-ref %outputs "out"))
+              (bin (string-append out "/bin"))
+              (shr (string-append out "/share/librepoll"))
+              (src (assoc-ref %build-inputs "source"))
+              (guile (assoc-ref %build-inputs "guile")))
+         (copy-recursively src ".")
+
+         (substitute* "librepoll"
+           (("#!/bin/guile")
+            (string-append "#!" guile "/bin/guile"))
+           (("\\(define share-path \"\"\\)")
+            (string-append "(define share-path \"" shr "/\")")))
+
+         (mkdir-p bin)
+         (mkdir-p shr)
+
+         (copy-file "librepoll" (string-append bin "/librepoll"))
+         (copy-recursively (string-append src "/assets/")
+                           (string-append shr "/assets/"))
+         (copy-file (string-append src "/librepoll.json")
+                    (string-append shr "/librepoll.json"))
+         (copy-file (string-append src "/LICENSE")
+                    (string-append shr "/LICENSE"))
+         #t))))
+  (synopsis "Free poll web interface")
+  (description
+   "LibrePoll provide a web interface to create opinion poll.")
+  (home-page "https://framagit.org/prouby/librepoll")
+  (license license:agpl3+))

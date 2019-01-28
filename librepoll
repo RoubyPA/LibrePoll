@@ -3,7 +3,7 @@
 !#
 ;;; LibrePoll -- Free opinion poll service.        -*- mode: scheme -*-
 ;;;
-;;; Copyright (C) 2018 Pierre-Antoine Rouby <contact@parouby.fr>
+;;; Copyright (C) 2019 Pierre-Antoine Rouby <contact@parouby.fr>
 ;;;
 ;;; This program is free software: you can redistribute it and/or
 ;;; modify it under the terms of the GNU Affero General Public License
@@ -76,12 +76,15 @@
 
 (define (sxml->xml-string sxml)
   (call-with-output-string
-    (λ (port)
+    (lambda (port)
       (sxml->xml sxml port))))
 
 ;;;
 ;;; Configuration
 ;;;
+
+;;; Used for guix package
+(define share-path "")
 
 (define (file-content path)
   "Returns PATH file-content as string."
@@ -124,9 +127,9 @@
 (define log
   (let ((lfile
          (let ((port (open-output-file LOG-FILE)))
-           (λ (message)
+           (lambda (message)
              (let ((lines (string-split message #\newline)))
-               (map  (λ (l)
+               (map  (lambda (l)
                        (write-line
                         (format "~a librepoll: ~a"
                                 (strftime "%b %d %H:%M:%S"
@@ -135,7 +138,7 @@
                         port))
                      lines))))))
     (if STDOUT
-        (λ (message)
+        (lambda (message)
           (display (format "~a\n" message))
           (lfile message))
         lfile)))
@@ -234,12 +237,12 @@ wrap the defaut returns, else do nothing. SQL is sql request in
 string."
   (define (name)
     DOCSTRING
-    (let* ((core (λ ()
+    (let* ((core (lambda ()
                    (exec-sql->list default-db sql)))
            ;; Wrap core with parser if parser is define.
            (exec (cond
                   ((procedure? parser)
-                   (λ ()
+                   (lambda ()
                      (parser (core))))
                   (else
                    core))))
@@ -252,11 +255,11 @@ wrap the defaut returns, else do nothing. SQL-FORMAT is sql request in
 string format."
   (define (name lst)
     DOCSTRING
-    (let* ((core (λ (lst)
+    (let* ((core (lambda (lst)
                    (exec-sql->list default-db
                                    (apply format
                                           (cons sql-format
-                                                (map (λ (s)
+                                                (map (lambda (s)
                                                        (if (string? s)
                                                            (substitute s "'"
                                                                        "&apos;")
@@ -265,7 +268,7 @@ string format."
            ;; Wrap core with parser if parser is define.
            (exec (cond
                   ((procedure? parser)
-                   (λ (lst)
+                   (lambda (lst)
                      (parser (core lst))))
                   (else
                    core))))
@@ -279,9 +282,9 @@ string format."
 
 (define (decode-post-uri-body body)
   "Decode and split BODY in uri format. Return list of alist."
-  (map (λ (l)
+  (map (lambda (l)
          (car (acons (list-ref l 0) (uri-decode (list-ref l 1)) '())))
-       (map (λ (s)
+       (map (lambda (s)
               (string-split s #\=))
             (string-split (utf8->string body) #\&))))
 
@@ -313,19 +316,19 @@ string format."
 (define-sql-request
   sql-vote-count
   "Returns number of all vote in db."
-  (λ (l) (caar l))
+  (lambda (l) (caar l))
   "SELECT COUNT(*) FROM vote;")
 
 (define-sql-request
   sql-poll-count
   "Returns number of all poll in db."
-  (λ (l) (caar l))
+  (lambda (l) (caar l))
   "SELECT COUNT(*) FROM poll;")
 
 (define-sql-request-format
   sql-vote-number-by-poll
   "Count all vote for poll."
-  (λ (l) (caar l))
+  (lambda (l) (caar l))
   "SELECT COUNT(*) FROM vote WHERE poll = ~a;")
 
 (define-sql-request
@@ -337,19 +340,19 @@ string format."
 (define-sql-request-format
   sql-poll-by-id
   "Returns poll coresponding to ID in db."
-  (λ (l) (car l))
+  (lambda (l) (car l))
   "SELECT name,description FROM poll WHERE id = ~a;")
 
 (define-sql-request-format
   sql-poll-by-name
   "Returns poll id."
-  (λ (l) (caar l))
+  (lambda (l) (caar l))
   "SELECT id FROM poll WHERE name = ~s;")
 
 (define-sql-request-format
   sql-options-for-poll
   "Returns list contain poll for first element of list."
-  (λ (l) (reverse l))
+  (lambda (l) (reverse l))
   "SELECT id,name FROM option WHERE poll = ~a;")
 
 (define-sql-request-format
@@ -361,13 +364,13 @@ string format."
 (define-sql-request-format
   sql-vote-num-for-option
   "Returns count of vote for poll."
-  (λ (l) (caar l))
+  (lambda (l) (caar l))
   "SELECT COUNT(*) FROM vote WHERE vote.option = ~a;")
 
 (define-sql-request-format
   sql-vote-exist?
   "Returns true if vote already exists."
-  (λ (l) (not (zero? (caar l))))
+  (lambda (l) (not (zero? (caar l))))
   "SELECT COUNT(*) FROM vote
      WHERE vote.poll = ~a AND
            vote.metadata = ~s;")
@@ -500,7 +503,7 @@ string format."
     (sxml->html
      `((header (h1 "Add options"))
        (div (@ (class "core"))
-            ,(map (λ (l) `(div (@ (class "option"))
+            ,(map (lambda (l) `(div (@ (class "option"))
                                ,(cadr l)))
                   options)
             (form
@@ -521,7 +524,7 @@ string format."
 (define (render-page-result poll)
   (let-values (((name desc) (poll-info poll)))
     (let* ((total (sql-vote-number-by-poll `(,poll)))
-           (fn (λ (l)
+           (fn (lambda (l)
                  (let* ((num (sql-vote-num-for-option
                               `(,(car l))))
                         (perc (percent num total))
@@ -551,7 +554,7 @@ string format."
        "@poll-description@" desc))))
 
 (define (render-page-poll id)
-  (let* ((fn (λ (l)
+  (let* ((fn (lambda (l)
                `(tr
                  (td (input (@ (type "radio")
                                (name "vote")
@@ -587,7 +590,7 @@ string format."
 (define (cookie-exists? cookies)
   (if (string? cookies)
       (let* ((split-point (string-split cookies #\;))
-             (split-equal (map (λ (s)
+             (split-equal (map (lambda (s)
                                  (let ((l (string-split s #\=)))
                                    (car (acons (car l) (cadr l) '()))))
                                split-point))
@@ -598,7 +601,7 @@ string format."
 (define (cookie-auth cookies)
   (if (cookie-exists? cookies)
       (let* ((split-point (string-split cookies #\;))
-             (split-equal (map (λ (s)
+             (split-equal (map (lambda (s)
                                  (let ((l (string-split s #\=)))
                                    (car (acons (car l) (cadr l) '()))))
                                split-point)))
@@ -658,12 +661,12 @@ define function NAME who returns error."
   (define name
     (if bool
         fun
-        (λ (path request-body cookies)
+        (lambda (path request-body cookies)
           (ret-error path "404" "Not found")))))
 
 (define-handler-matcher get-api
   API
-  (λ (path request-body cookies)
+  (lambda (path request-body cookies)
     (match path
       ;; api/v1/status
       (("api" "v1" "status")
@@ -712,7 +715,7 @@ define function NAME who returns error."
 
 (define-handler-matcher post-api
   API
-  (λ (path request-body cookies)
+  (lambda (path request-body cookies)
     (match path
       ;; API v1
       ;; /api/v1/create/poll
@@ -741,7 +744,7 @@ define function NAME who returns error."
 
 (define-handler-matcher get-ui
   UI
-  (λ (path request-body cookies)
+  (lambda (path request-body cookies)
     (match path
       ;; /index.html or /
       ((or ("index.html")
@@ -752,7 +755,7 @@ define function NAME who returns error."
       ;; /assets/:theme/:file
       (("assets" theme file)
        (let ((ct (content-type file))
-             (file (string-append "assets/" theme "/" file)))
+             (file (string-append share-path "assets/" theme "/" file)))
          (if (file-exists? file)
              (values `((content-type . ,ct))
                      (file-content file))
@@ -775,7 +778,7 @@ define function NAME who returns error."
 
 (define-handler-matcher post-ui
   UI
-  (λ (path request-body cookies)
+  (lambda (path request-body cookies)
     (match path
       ;; /vote/:poll-id
       (("result" poll)
@@ -826,7 +829,7 @@ define function NAME who returns error."
                request-path))
 
   (catch #t
-    (λ ()
+    (lambda ()
       (let ((path (remove string-null? (string-split request-path #\/))))
         (match (request-method request)
           ('GET
@@ -843,7 +846,7 @@ define function NAME who returns error."
               (post-ui path request-body cookies))))
           (_
            (ret-error path "404" "Not found")))))
-    (λ (key . args)
+    (lambda (key . args)
       (log (format "error: ~a ~a" key args))
       (ret-error "" "500" "Internal server error"))))
 
