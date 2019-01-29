@@ -27,8 +27,6 @@
              (srfi srfi-28)
              (srfi srfi-11)
              ;; Html & Markdown
-             (syntax-highlight)
-             (syntax-highlight scheme)
              (sxml simple)
              (commonmark)
              ;; Web
@@ -402,35 +400,6 @@ string format."
 ;;;
 ;;; Render
 ;;;
-
-(define (highlight-scheme code)
-  (if (not (equal? (string-match "```scheme" code) #f))
-      (let* ((index   (cdr (vector-ref (string-match "```scheme" code) 1)))
-             (str     (substring code index))
-             (index2  (car (vector-ref (string-match "```" str) 1)))
-             (str2    (substring str 0 index2))
-             (xml (sxml->xml-string
-                   (highlight lex-scheme str2))))
-        (string-replace code xml index (+ index index2)))
-      code))
-
-(define (substitute-code-html xml)
-  "Substitute HTML Character Entities to character."
-  (define (aux str l)
-    (cond
-     ((null-list? l) str)
-     ((list? l)
-      (match (car l)
-        ((o . n) (aux (substitute str o n) (cdr l)))
-        (_ (throw 'decode-html `(l)))))
-     (else (throw 'decode-html `(l)))))
-
-  (aux xml '(("&lt;" . "<")
-             ("&gt;" . ">")
-             ("&quot;" . "\"")
-             ("&amp;" . "&")
-             ("&apos;" . "'")
-             ("&nbsp;" . " "))))
 
 (define (sxml->html sxml)
   (let ((page `((html
@@ -810,10 +779,8 @@ define function NAME who returns error."
                      (render-page-create-poll-get))
              (let* ((sql-return (sql-create-poll
                                  `(,name
-                                   ,(substitute-code-html
-                                     (sxml->xml-string
-                                      (commonmark->sxml
-                                       (highlight-scheme desc)))))))
+                                   ,(sxml->xml-string
+                                     (commonmark->sxml desc)))))
                     (id (sql-poll-by-name `(,name))))
                (values (html-headers cookies)
                        (render-page-add-option (number->string id)))))))

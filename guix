@@ -20,8 +20,7 @@
    `(("guile" ,guile-2.2)
      ("guile-json" ,guile-json)
      ("guile-commonmark" ,guile-commonmark)
-     ("guile-sqlite3" ,guile-sqlite3)
-     ("guile-syntax-highlight" ,guile-syntax-highlight)))
+     ("guile-sqlite3" ,guile-sqlite3)))
   (arguments
    `(#:modules ((guix build utils))
      #:builder
