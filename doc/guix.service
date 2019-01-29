@@ -1,0 +1,108 @@
+;;; -*- mode: scheme -*-
+
+;;;
+;;; LibrePoll
+;;;
+
+(define %librepoll-log-file-service     ;Service log file
+  "/var/log/librepoll.log")
+
+(define %librepoll-log-file             ;Process log file
+  "/var/cache/guix/librepoll/librepoll.log")
+
+(define-record-type* <librepoll-configuration>
+  librepoll-configuration make-librepoll-configuration
+  librepoll-configuration?
+  (package  librepoll-configuration-package
+            (default librepoll))
+  (db       librepoll-configuration-db
+            (default "/var/cache/guix/librepoll/db.sqlite"))
+  (host     librepoll-configuration-host
+            (default "http://localhost:8080"))
+  (port     librepoll-configuration-port
+            (default 8080))
+  (api      librepoll-configuration-api?
+            (default "false"))
+  (ui       librepoll-configuration-ui?
+            (default "true"))
+  (title    librepoll-configuration-title
+            (default "LibrePoll on Guix"))
+  (theme    librepoll-configuration-theme
+            (default "default"))
+  (comment  librepoll-configuration-comment
+            (default "")))
+
+(define %librepoll-accounts
+  (list (user-group
+         (name "librepoll")
+         (system? #t))
+        (user-account
+         (name "librepoll")
+         (group "librepoll")
+         (system? #t)
+         (comment "librepoll")
+         (home-directory "/var/lib/librepoll")
+         (shell (file-append shadow "/sbin/nologin")))))
+
+(define %librepoll-activation
+  #~(begin
+      (use-modules (guix build utils))
+      (let ((home-dir "/var/cache/guix/librepoll")
+            (user (getpwnam "librepoll")))
+        (mkdir-p home-dir)
+        (chown home-dir (passwd:uid user) (passwd:gid user))
+        (chmod home-dir #o755))))
+
+(define %librepoll-log-rotations
+  (list (log-rotation
+         (files (list %librepoll-log-file))
+         (frequency 'weekly))))
+
+(define librepoll-shepherd-service
+  (match-lambda
+    (($ <librepoll-configuration> package db host port api
+                                  ui title theme comment)
+     (let ((conf-file (mixed-text-file "librepoll.json"
+                                       (scm->json-string
+                                        `(("db"   . ,db)
+                                          ("host" . ,host)
+                                          ("port" . ,port)
+                                          ("security" . "cookies")
+                                          ("api"    . ,api)
+                                          ("ui"     . ,ui)
+                                          ("stdout" . "false")
+                                          ("log" . ,%librepoll-log-file)
+                                          ("title"   . ,title)
+                                          ("theme"   . ,theme)
+                                          ("comment" . ,comment))))))
+       (with-imported-modules (source-module-closure
+                               '((gnu build shepherd)
+                                 (gnu system file-systems)))
+         (list
+          (shepherd-service
+           (documentation "librepoll daemon")
+           (provision     '(librepoll))
+           (requirement   '(networking))
+           (modules '((gnu build shepherd)
+                      (gnu system file-systems)))
+           (start #~(make-forkexec-constructor
+                     (list #$(file-append package "/bin/librepoll")
+                           #$conf-file)
+                     #:user "librepoll"
+                     #:group "librepoll"
+                     #:log-file #$%librepoll-log-file-service))
+           (stop #~(make-kill-destructor)))))))))
+
+(define librepoll-service-type
+  (service-type
+   (name 'librepoll)
+   (description "Run the librepoll server.")
+   (extensions
+    (list (service-extension account-service-type
+                             (const %librepoll-accounts))
+          (service-extension activation-service-type
+                             (const %librepoll-activation))
+          (service-extension rottlog-service-type
+                             (const %librepoll-log-rotations))
+          (service-extension shepherd-root-service-type
+                             librepoll-shepherd-service)))))
