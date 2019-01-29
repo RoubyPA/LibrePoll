@@ -827,4 +827,5 @@ define function NAME who returns error."
 (log (string-append "server: ----------\n"
                     "server: Run server\n"
                     "server: ----------"))
-(run-server my-handler 'http `(#:port ,PORT))
+(run-server my-handler 'http `(#:port ,PORT
+                               #:addr ,INADDR_ANY))
