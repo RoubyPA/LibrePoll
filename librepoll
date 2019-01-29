@@ -621,7 +621,11 @@ string format."
 ;;;
 
 (define (ret-error path code message)
-  (log (string-append "http: " code " - " message " - " path))
+  (log (string-append "http: " code " - " message " - "
+                      (cond
+                       ((string? path) path)
+                       ((list? path)   (string-join path "/"))
+                       (else ""))))
   (values `((content-type . (text/html))
             (status . ,code))
           (sxml->html `(h1 ,(string-append
@@ -727,11 +731,11 @@ define function NAME who returns error."
       ;; /assets/:theme/:file
       (("assets" theme file)
        (let ((ct (content-type file))
-             (file (string-append share-path "assets/" theme "/" file)))
-         (if (file-exists? file)
+             (fpath (string-append share-path "assets/" theme "/" file)))
+         (if (file-exists? fpath)
              (values `((content-type . ,ct))
-                     (file-content file))
-             (ret-error path "404" "Not found"))))
+                     (file-content fpath))
+             (ret-error fpath "404" "Not found"))))
       ;; /result/:poll-id
       (("result" poll)
        (values (html-headers cookies)
