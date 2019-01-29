@@ -14,7 +14,6 @@ description.
  - Guile-json
  - Guile-sqlite3
  - Guile-commonmark
- - Guile-syntax-highlight
 
 
 ## Test LibrePoll in sources
