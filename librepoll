@@ -109,17 +109,25 @@
           (json-string->scm json))
         (abort-with-msg "No config file"))))
 
-(define DB-FILE  (hash-ref conf "db"))
-(define HOST     (hash-ref conf "host"))
-(define PORT     (hash-ref conf "port"))
-(define SECURITY (hash-ref conf "security"))
-(define API      (string= (hash-ref conf "api") "true"))
-(define UI       (string= (hash-ref conf "ui")  "true"))
-(define LOG-FILE (hash-ref conf "log"))
-(define STDOUT   (string= (hash-ref conf "stdout") "true"))
-(define TITLE    (hash-ref conf "title"))
-(define THEME    (hash-ref conf "theme"))
-(define COMMENT  (hash-ref conf "comment"))
+(define (conf-ref conf key)
+  "Use 'hash-ref' if CONF is hash-table, else 'assoc-ref'."
+  (cond
+   ((hash-table? conf)
+    (hash-ref conf key))
+   (else
+    (assoc-ref conf key))))
+
+(define DB-FILE  (conf-ref conf "db"))
+(define HOST     (conf-ref conf "host"))
+(define PORT     (conf-ref conf "port"))
+(define SECURITY (conf-ref conf "security"))
+(define API      (string= (conf-ref conf "api") "true"))
+(define UI       (string= (conf-ref conf "ui")  "true"))
+(define LOG-FILE (conf-ref conf "log"))
+(define STDOUT   (string= (conf-ref conf "stdout") "true"))
+(define TITLE    (conf-ref conf "title"))
+(define THEME    (conf-ref conf "theme"))
+(define COMMENT  (conf-ref conf "comment"))
 
 ;;;
 ;;; Log
