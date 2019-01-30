@@ -580,27 +580,27 @@ string format."
         (assoc-ref split-equal "librepoll_auth"))
       (number->string (random-number))))
 
-(define (addon-headers cookies)
+(define* (addon-headers cookies #:optional (cookie-value #f))
   (if (not (cookie-exists? cookies))
       `(set-cookie . ,(string-append "librepoll_auth="
-                                     (cookie-auth cookies) "; "
-                                     "Domain=" HOST "; "
+                                     (if (string? cookie-value)
+                                         cookie-value
+                                         (cookie-auth cookies)) ";"
                                      "Max-Age=31536000"))
       '()))
 
-(define (json-headers cookies)
-  (let ((cookie (addon-headers cookies)))
+(define* (xxx-headers xxx cookies #:optional (cookie-value #f))
+  (let ((cookie (addon-headers cookies cookie-value)))
     (if (null? cookie)
-        '((content-type . (application/json)))
-        `((content-type . (application/json))
+        `((content-type . ,xxx))
+        `((content-type . ,xxx)
           ,cookie))))
 
-(define (html-headers cookies)
-  (let ((cookie (addon-headers cookies)))
-    (if (null? cookie)
-        '((content-type . (text/html)))
-        `((content-type . (text/html))
-          ,cookie))))
+(define* (json-headers cookies #:optional (cookie-value #f))
+  (xxx-headers '(application/json) cookies cookie-value))
+
+(define* (html-headers cookies #:optional (cookie-value #f))
+  (xxx-headers '(text/html) cookies cookie-value))
 
 (define mime-type
   '(("jpeg" . (image/jpeg))
@@ -763,7 +763,7 @@ define function NAME who returns error."
               (cookie (cookie-auth cookies))
               (vote (if (not (sql-vote-exist? `(,poll ,cookie)))
                         (sql-vote `(,poll ,id ,cookie)))))
-         (values (html-headers cookies)
+         (values (html-headers cookies cookie)
                  (render-page-result poll))))
       ;; /add_option/:poll-id
       (("add_option" poll)
