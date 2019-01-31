@@ -242,12 +242,24 @@ License along with this program.  If not, see
 
 (define-syntax-rule (define-sql-request name DOCSTRING parser sql)
   "Create new procedure named NAME. If PARSER is a procedure,
-wrap the defaut returns, else do nothing. SQL is sql request in
-string."
-  (define (name)
+wrap the defaut returns, else do nothing. SQL is sql request in string
+format."
+  (define* (name #:optional (args '()))
     DOCSTRING
-    (let* ((core (lambda ()
-                   (exec-sql->list default-db sql)))
+    (let* ((core (if (null-list? args)
+                     (lambda ()
+                       (log (format "sql: ~a" sql))
+                       (exec-sql->list default-db sql))
+                     (lambda ()
+                       (let* ((l (map (lambda (s)
+                                         (if (string? s)
+                                             (substitute s "'"
+                                                         "&apos;")
+                                             s))
+                                      args))
+                              (str (apply format (cons sql l))))
+                         (log (format "sql: ~a" str))
+                         (exec-sql->list default-db str)))))
            ;; Wrap core with parser if parser is define.
            (exec (cond
                   ((procedure? parser)
@@ -255,35 +267,7 @@ string."
                      (parser (core))))
                   (else
                    core))))
-      (log (format "sql: ~a" sql))
       (exec))))
-
-(define-syntax-rule (define-sql-request-format name DOCSTRING parser sql-format)
-  "Create new procedure named NAME. If PARSER is a procedure,
-wrap the defaut returns, else do nothing. SQL-FORMAT is sql request in
-string format."
-  (define (name lst)
-    DOCSTRING
-    (let* ((core (lambda (lst)
-                   (exec-sql->list default-db
-                                   (apply format
-                                          (cons sql-format
-                                                (map (lambda (s)
-                                                       (if (string? s)
-                                                           (substitute s "'"
-                                                                       "&apos;")
-                                                           s))
-                                                     lst))))))
-           ;; Wrap core with parser if parser is define.
-           (exec (cond
-                  ((procedure? parser)
-                   (lambda (lst)
-                     (parser (core lst))))
-                  (else
-                   core))))
-      (log (format "sql: ~a"
-                   (apply format (cons sql-format lst))))
-      (exec lst))))
 
 ;;;
 ;;; Tools
@@ -334,7 +318,7 @@ string format."
   (lambda (l) (caar l))
   "SELECT COUNT(*) FROM poll;")
 
-(define-sql-request-format
+(define-sql-request
   sql-vote-number-by-poll
   "Count all vote for poll."
   (lambda (l) (caar l))
@@ -346,37 +330,37 @@ string format."
   'nil
   "SELECT id,name,description FROM poll;")
 
-(define-sql-request-format
+(define-sql-request
   sql-poll-by-id
   "Returns poll coresponding to ID in db."
   (lambda (l) (car l))
   "SELECT name,description FROM poll WHERE id = ~a;")
 
-(define-sql-request-format
+(define-sql-request
   sql-poll-by-name
   "Returns poll id."
   (lambda (l) (caar l))
   "SELECT id FROM poll WHERE name = ~s;")
 
-(define-sql-request-format
+(define-sql-request
   sql-options-for-poll
   "Returns list contain poll for first element of list."
   (lambda (l) (reverse l))
   "SELECT id,name FROM option WHERE poll = ~a;")
 
-(define-sql-request-format
+(define-sql-request
   sql-vote-for-poll
   "Returns list of all vote for poll."
   'nil
   "SELECT id,option,date,metadata FROM vote WHERE poll = ~a;")
 
-(define-sql-request-format
+(define-sql-request
   sql-vote-num-for-option
   "Returns count of vote for poll."
   (lambda (l) (caar l))
   "SELECT COUNT(*) FROM vote WHERE vote.option = ~a;")
 
-(define-sql-request-format
+(define-sql-request
   sql-vote-exist?
   "Returns true if vote already exists."
   (lambda (l) (not (zero? (caar l))))
@@ -384,21 +368,21 @@ string format."
      WHERE vote.poll = ~a AND
            vote.metadata = ~s;")
 
-(define-sql-request-format
+(define-sql-request
   sql-vote
   "Insert new vote in db."
   'nil
   "INSERT INTO vote (date, poll, option, metadata)
      VALUES (DATETIME('now'), ~a, ~a, ~s);")
 
-(define-sql-request-format
+(define-sql-request
   sql-create-poll
   "Insert new poll in db."
   'nil
   "INSERT INTO poll (name,description,creation_date)
      VALUES(~s, '~a' ,DATETIME('now'));")
 
-(define-sql-request-format
+(define-sql-request
   sql-create-option-for-poll
   "Insert new poll option in db."
   'nil
