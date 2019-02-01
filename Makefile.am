@@ -19,4 +19,6 @@ install-exec-hook:
 
 all-local: librepoll
 	$(AM_V_GEN)$(GUILD) compile $(GUILD_COMPILE_FLAGS)	\
-	  -L "$(top_srcdir)" -L "$(top_builddir)" librepoll
+	  -L "$(top_srcdir)" -L "$(top_builddir)"		\
+	  -o "$(godir)/librepoll.go"				\
+	  librepoll
