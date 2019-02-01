@@ -642,41 +642,7 @@ define function NAME who returns error."
                (scm->json-string `(("status"  . "OK")
                                    ("license" . "AGPL")
                                    ("host"    . ,HOST)))))
-      ;; api/v1/get/polls
-      (("api" "v1" "get" "polls")
-       (let ((data (sql-polls)))
-         (values (json-headers cookies)
-                 (scm->json-string data))))
-      ;; api/v1/get/vote/count
-      (("api" "v1" "get" "vote" "count")
-       (let ((data (sql-vote-count)))
-         (values (json-headers cookies)
-                 (scm->json-string `(("result" . ,data))))))
-      ;; api/v1/get/vote/:poll
-      (("api" "v1" "get" "vote" poll)
-       (let ((data (sql-vote-for-poll `(,poll))))
-         (values (json-headers cookies)
-                 (scm->json-string data))))
-      ;; api/v1/get/options/:poll
-      (("api" "v1" "get" "options" poll)
-       (let ((data (sql-options-for-poll `(,poll))))
-         (values (json-headers cookies)
-                 (scm->json-string data))))
-      ;; api/v1/get/vote/num/:option
-      (("api" "v1" "get" "vote" "num" option)
-       (let ((data (sql-vote-num-for-option `(,option))))
-         (values (json-headers cookies)
-                 (scm->json-string `(("result" . ,data))))))
-      ;; api/v1/vote/:poll/:option
-      (("api" "v1" "vote" poll option)
-       (let* ((cookie (cookie-auth cookies))
-              (data (if (not (sql-vote-exist? `(,poll ,cookie)))
-                        (sql-vote `(,poll ,option ,cookie))
-                        '())))
-         (values (json-headers cookies)
-                 (scm->json-string `(("poll" . ,poll)
-                                     ("option" . ,option)
-                                     ("status" . "voted"))))))
+      ;; TODO: API v1 GET
       ;; Else
       (x
        (ret-error path "404" "Not found")))))
@@ -685,28 +651,7 @@ define function NAME who returns error."
   API
   (lambda (path request-body cookies)
     (match path
-      ;; API v1
-      ;; /api/v1/create/poll
-      (("api" "v1" "create" "poll")
-       (let* ((body (decode-post-uri-body request-body))
-              (name (assoc-ref body "name"))
-              (desc (assoc-ref body "description"))
-              (sql-return (sql-create-poll  `(,name ,desc)))
-              (id (sql-poll-by-name `(,name))))
-         (values (json-headers cookies)
-                 (scm->json-string `(("status" . "ok")
-                                     ("id" . ,id)
-                                     ("name" . ,name)
-                                     ("description" . ,desc))))))
-      ;; /api/v1/add/option
-      (("api" "v1" "add" "option")
-       (let* ((body (decode-post-uri-body request-body))
-              (name (assoc-ref body "name"))
-              (poll (assoc-ref body "poll"))
-              (sql-return (sql-create-option-for-poll `(,poll ,name)))
-              (options (sql-options-for-poll `(,poll))))
-         (values (json-headers cookies)
-                 (scm->json-string options))))
+      ;; TODO: API v1 POST
       (x
        (ret-error path "404" "Not found")))))
 
