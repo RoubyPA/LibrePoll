@@ -16,24 +16,18 @@ description.
  - Guile-commonmark
 
 
-## Test LibrePoll in sources
-
-Run librepoll with default configuration.
-
-```shell
-$ guile librepoll
-```
-
-Change configuration file.
-
-```shell
-$ guile librepoll my/config/file.json
-```
-
-
 ## Install
 
-Use guix.
+### Autotools
+
+```shell
+$ ./bootstrap
+$ ./configure
+$ make
+$ make install
+```
+
+### GNU Guix
 
 ```shell
 $ guix package -f guix
@@ -42,7 +36,13 @@ $ guix package -f guix
 
 ## Run
 
-After guix install.
+Before installation.
+
+```shell
+$ ./pre-inst-env librepoll [CONFIGFILE]
+```
+
+After installation.
 
 ```shell
 $ librepoll [CONFIGFILE]
