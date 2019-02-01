@@ -1,4 +1,4 @@
-#!/bin/guile \
+#!@GUILE@ \
 --no-auto-compile -s
 !#
 ;;; LibrePoll -- Free opinion poll service.        -*- mode: scheme -*-
@@ -81,11 +81,11 @@
 ;;; Configuration
 ;;;
 
-;;; ** DO NOT EDIT ** Please do not edit the following block, used for guix
-;;; installation.
-(define share-path "")
-;;; ** END **
-
+(define share-path
+  (let ((dir (getenv "LIBREPOLL_ASSETS_DIR")))
+    (if (string? dir)
+        dir
+        "")))
 
 (define (file-content path)
   "Returns PATH file-content as string."
