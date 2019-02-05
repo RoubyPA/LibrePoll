@@ -1,7 +1,7 @@
-#!@GUILE@ \
---no-auto-compile -s
+#!@GUILE@ --no-auto-compile
+-*- mode: scheme -*-
 !#
-;;; LibrePoll -- Free opinion poll service.        -*- mode: scheme -*-
+;;; LibrePoll -- Free opinion poll service.
 ;;;
 ;;; Copyright (C) 2019 Pierre-Antoine Rouby <contact@parouby.fr>
 ;;;
@@ -765,8 +765,10 @@ define function NAME who returns error."
 ;;; Run server
 ;;;
 
-(log (string-append "server: ----------\n"
-                    "server: Run server\n"
-                    "server: ----------"))
+(log (string-append "server: ------------\n"
+                    "server:  Run server \n"
+                    "server: ------------"))
 (run-server my-handler 'http `(#:port ,PORT
                                #:addr ,INADDR_ANY))
+
+;;; End of file
