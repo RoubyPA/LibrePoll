@@ -196,9 +196,7 @@
        'Do you like this software ?',
        '~a',
        DATETIME('now') );"
-           (sxml->xml-string
-            (commonmark->sxml
-             "This program is free software, licensed under
+           "This program is free software, licensed under
 [AGPL](http://www.gnu.org/licenses/).
 
 ```
@@ -216,7 +214,7 @@ You should have received a copy of the GNU Affero General Public
 License along with this program.  If not, see
 <http://www.gnu.org/licenses/>.
 ```
-"))))
+"))
 
   (sql-request
    "INSERT INTO option (poll,name)
@@ -504,18 +502,16 @@ format."
                                   ,perc-str)))))))
            (opts (sql-options-for-poll `(,poll)))
            (opth (map fn opts)))
-      (substitute
-       (sxml->html `((header (h1 ,name))
-                     (div (@ (class "core"))
-                          (div (@ (class "description"))
-                               "@poll-description@")
-                          (table
-                           (tr
-                            (th "Options")
-                            (th "Votes")
-                            (th "Results"))
-                           ,opth))))
-       "@poll-description@" desc))))
+      (sxml->html `((header (h1 ,name))
+                    (div (@ (class "core"))
+                         (div (@ (class "description"))
+                              ,(commonmark->sxml desc))
+                         (table
+                          (tr
+                           (th "Options")
+                           (th "Votes")
+                           (th "Results"))
+                          ,opth)))))))
 
 (define (render-page-poll id)
   (let* ((fn (lambda (l)
@@ -745,8 +741,7 @@ define function NAME who returns error."
                      (render-page-create-poll-get))
              (let* ((sql-return (sql-create-poll
                                  `(,name
-                                   ,(sxml->xml-string
-                                     (commonmark->sxml desc)))))
+                                   ,desc)))
                     (id (sql-poll-by-name `(,name))))
                (values (html-headers cookies)
                        (render-page-add-option (number->string id)))))))
