@@ -641,8 +641,33 @@ define function NAME who returns error."
        (values (json-headers cookies)
                (scm->json-string `(("status"  . "OK")
                                    ("license" . "AGPL")
-                                   ("host"    . ,HOST)))))
-      ;; TODO: API v1 GET
+                                   ("host"    . ,HOST)
+                                   ("votes"   . ,(sql-vote-count))
+                                   ("polls"   . ,(sql-poll-count))))))
+      ;; api/v1/poll/:id
+      (("api" "v1" "poll" id)
+       (let* ((total (sql-vote-number-by-poll `(,id)))
+              (fn (lambda (l)
+                    (let* ((oid  (list-ref l 0))
+                           (otxt (list-ref l 1))
+                           (num  (sql-vote-num-for-option `(,oid))))
+                      `(,oid ,otxt ,num))))
+              (poll (sql-poll-by-id `(,id)))
+              (name (list-ref poll 0))
+              (desc (list-ref poll 1))
+              (opts (sql-options-for-poll `(,id)))
+              (options (map fn opts)))
+         (values (json-headers cookies)
+                 (scm->json-string `(("name" . ,name)
+                                     ("description" . ,desc)
+                                     ("options" . ,options))))))
+      ;; api/v1/vote/:poll/:opt
+      (("api" "v1" "vote" poll opt)
+       (let* ((cookie (cookie-auth cookies))
+              (vote (if (not (sql-vote-exist? `(,poll ,cookie)))
+                        (sql-vote `(,poll ,opt ,cookie)))))
+         (values (json-headers cookies)
+                 (scm->json-string `(("status" . "Ok"))))))
       ;; Else
       (x
        (ret-error path "404" "Not found")))))
@@ -745,13 +770,13 @@ define function NAME who returns error."
         (match (request-method request)
           ('GET
            (match path
-             (("api" "v1" rest)
+             (("api" "v1" . rest)
               (get-api path request-body cookies))
              (x
               (get-ui path request-body cookies))))
           ('POST
            (match path
-             (("api" "v1" rest)
+             (("api" "v1" . rest)
               (post-api path request-body cookies))
              (x
               (post-ui path request-body cookies))))
