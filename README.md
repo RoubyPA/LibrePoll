@@ -84,3 +84,37 @@ configuation file.
     "comment"  : "Message to display in the index page."
 }
 ```
+
+## API
+
+### `GET /api/v1/status`
+
+Get instance status.
+
+| Name    | Value                       | Type   |
+|---------|-----------------------------|--------|
+| status  | Always "OK"                 | String |
+| license | License name (AGPL)         | String |
+| host    | Host name                   | String |
+| votes   | Number of vote on incetance | Int    |
+| polls   | Number of poll on incetance | Int    |
+
+### `GET /api/v1/poll/:id`
+
+Get instance poll by `:id`.
+
+| Name        | Value               | Type              |
+|-------------|---------------------|-------------------|
+| name        | Name of poll        | String            |
+| description | Description of poll | String (markdown) |
+| options     | List of options     | List              |
+
+### `GET /api/vote/:poll/:opt`
+
+New vote for `:poll` and `:opt` (option id).
+
+This api use session cookies (*librepoll_auth*) for authentification.
+
+| Name   | Value       | Type   |
+|--------|-------------|--------|
+| status | Always "Ok" | String |
