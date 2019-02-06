@@ -466,7 +466,8 @@ format."
      `((header (h1 "Add options"))
        (div (@ (class "core"))
             ,(map (lambda (l) `(div (@ (class "option"))
-                               ,(cadr l)))
+                                    ,(substitute (cadr l) "&apos;"
+                                                 "'")))
                   options)
             (form
              (@ (action ,(string-append "/add_option/" poll))
@@ -494,7 +495,7 @@ format."
                    `((tr (td (div (@ (class ,(if (> perc 50)
                                                  "result-maj"
                                                  "result")))
-                                  ,(cadr l)))
+                                  ,(substitute (cadr l) "&apos;" "'")))
                          (td ,num)
                          (td (div (@ (class ,(if (> perc 50)
                                                  "result-maj"
@@ -519,29 +520,27 @@ format."
                  (td (input (@ (type "radio")
                                (name "vote")
                                (value ,(car l)))
-                            ,(cadr l))))))
+                            ,(substitute (cadr l) "&apos;" "'"))))))
          (poll (sql-poll-by-id `(,id)))
          (name (list-ref poll 0))
          (desc (list-ref poll 1))
          (opts (sql-options-for-poll `(,id)))
          (opth (map fn opts)))
-    (substitute
-     (sxml->html
-      `((header (h1 ,name))
-        (div (@ (class "core"))
-             (div (@ (class "description"))
-                  "@poll-description@")
-             (form
-              (@ (action
-                  ,(string-append
-                    "/result/" id))
-                 (method "post"))
-              (table
-               ,opth
-               (tr
-                (td (input (@ (type  "submit")
-                              (value "Vote"))))))))))
-     "@poll-description@" desc)))
+    (sxml->html
+     `((header (h1 ,name))
+       (div (@ (class "core"))
+            (div (@ (class "description"))
+                 ,(commonmark->sxml desc))
+            (form
+             (@ (action
+                 ,(string-append
+                   "/result/" id))
+                (method "post"))
+             (table
+              ,opth
+              (tr
+               (td (input (@ (type  "submit")
+                             (value "Vote"))))))))))))
 
 ;;;
 ;;; Cookies !
@@ -647,7 +646,7 @@ define function NAME who returns error."
                     (let* ((oid  (list-ref l 0))
                            (otxt (list-ref l 1))
                            (num  (sql-vote-num-for-option `(,oid))))
-                      `(,oid ,otxt ,num))))
+                      `(,oid ,(substitute otxt "&apos;" "'") ,num))))
               (poll (sql-poll-by-id `(,id)))
               (name (list-ref poll 0))
               (desc (list-ref poll 1))
@@ -655,7 +654,11 @@ define function NAME who returns error."
               (options (map fn opts)))
          (values (json-headers cookies)
                  (scm->json-string `(("name" . ,name)
-                                     ("description" . ,desc)
+                                     ("description" . ,(substitute
+                                                        (substitute desc
+                                                                    "&apos;"
+                                                                    "'")
+                                                        "\r" ""))
                                      ("options" . ,options))))))
       ;; api/v1/vote/:poll/:opt
       (("api" "v1" "vote" poll opt)
