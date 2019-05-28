@@ -8,6 +8,9 @@ LibrePoll provide a web interface to create opinion poll with Markdown
 description.
 
 
+![example](/doc/example.png)
+
+
 ## Dependencies
 
  - Guile >= 2.2
