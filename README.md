@@ -65,7 +65,7 @@ configuation file.
 | stdout   | Display log in stdout ("true" or "false")                   |
 | log      | Log file                                                    |
 | title    | Page title                                                  |
-| theme    | Theme to use in html                                        |
+| theme    | Theme to use in html (default, blue, purple, none)          |
 | comment  | Message to display in the index page (Markdown)             |
 
 
