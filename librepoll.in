@@ -23,9 +23,11 @@
              (ice-9 regex)
              (ice-9 popen)
              (ice-9 rdelim)
+             ((ice-9 format) #:prefix icef:)
              (srfi srfi-1)
              (srfi srfi-28)
              (srfi srfi-11)
+             (rnrs sorting)
              ;; Html & Markdown
              (sxml simple)
              (commonmark)
@@ -387,6 +389,60 @@ format."
   "INSERT INTO option (poll,name)
      VALUES(~s, ~s);")
 
+
+;;;
+;;; Pie chart
+;;;
+
+(define PI 3.141592653589793)
+
+(define (percentage->coordinate percent)
+  "Percentage PERCENT to coordinate '(x y)."
+  (let* ((var (* 2 PI percent))
+         (x (cos var))
+         (y (sin var)))
+    `(,x ,y)))
+
+(define (svg-line x1 y1 percent color)
+  (match (percentage->coordinate percent)
+    ((x y)
+     `((line (@ (x1 ,x1) (y1 ,y1)
+                (x2 ,(+ x1 x)) (y2 ,(+ y1 y))
+                (stroke-width "0.05")
+                (fill "transparent")
+                (stroke ,color)))))))
+
+(define (svg-path x1 y1 x2 y2 c p)
+  (display p) (newline)
+  `((path (@ (d ,(icef:format #f "M ~5f ~5f A 1 1 0 ~a 1 ~5f ~5f L 0 0"
+                              (number->string x1)
+                              (number->string y1)
+                              (if (> p 0.5) 1 0)
+                              (number->string x2)
+                              (number->string y2)))
+             (id ,(format "svg_path_~a" c))))))
+
+(define (make-paths x1 y1 p accp c acc)
+  (match p
+    (() acc)
+    ((a . rest)
+     (match (percentage->coordinate (+ a accp))
+       ((x2 y2)
+        (let ((acc (cons (svg-path x1 y1 x2 y2 c a) acc)))
+          (make-paths x2 y2 rest (+ a accp)
+                      (+ 1 c) acc)))))))
+
+(define (make-pie-chart percent-lst)
+  "Make sxml svg pie chart from list of precentage PRENCET-LST between 0 and
+1."
+  `((svg (@ (width "200px")
+            (height "200px")
+            (viewBox "-1 -1 2 2")
+            (style "transform: rotate(-0.25turn)")
+            (xmlns "http://www.w3.org/2000/svg")
+            (xmlns "http://www.w3.org/1999/xlink"))
+         ,(make-paths 1 0 percent-lst 0 0 '()))))
+
 ;;;
 ;;; Render
 ;;;
@@ -486,7 +542,7 @@ format."
 
 (define (render-page-result poll)
   (let-values (((name desc) (poll-info poll)))
-    (let* ((total (sql-vote-number-by-poll `(,poll)))
+    (let* ((total (sql-vote-number-by-poll (list poll)))
            (fn (lambda (l)
                  (let* ((num (sql-vote-num-for-option
                               `(,(car l))))
@@ -501,18 +557,37 @@ format."
                                                  "result-maj"
                                                  "result")))
                                   ,perc-str)))))))
+           (pl (lambda (l)
+                 (let* ((num (sql-vote-num-for-option
+                              `(,(car l)))))
+                   (/ (percent num total) 100.0))))
            (opts (sql-options-for-poll `(,poll)))
-           (opth (map fn opts)))
+           (opts-sorted (list-sort (lambda (x y)
+                                     (let ((num-x (sql-vote-num-for-option
+                                                   `(,(car x))))
+                                           (num-y (sql-vote-num-for-option
+                                                   `(,(car y)))))
+                                       (> num-x num-y)))
+                                   opts))
+           (opth (map fn opts-sorted))
+           (percent-lst (map pl opts-sorted)))
       (sxml->html `((header (h1 ,name))
                     (div (@ (class "core"))
                          (div (@ (class "description"))
                               ,(commonmark->sxml desc))
                          (table
+                          (@ (class "main"))
                           (tr
-                           (th "Options")
-                           (th "Votes")
-                           (th "Results"))
-                          ,opth)))))))
+                           (td
+                            (table
+                             (tr
+                              (th (em "Options"))
+                              (th (em "Votes"))
+                              (th (em "Results")))
+                             ,opth))
+                           (td
+                            ,(make-pie-chart (remove zero?
+                                                     percent-lst)))))))))))
 
 (define (render-page-poll id)
   (let* ((fn (lambda (l)
