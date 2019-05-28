@@ -13,6 +13,7 @@ nobase_dist_assets_DATA =			\
 	assets/default/main.css			\
 	assets/blue/main.css 			\
 	assets/purple/main.css 			\
+	assets/none/main.css 			\
 	librepoll.json
 
 install-exec-hook:
