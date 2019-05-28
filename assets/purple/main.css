@@ -1,0 +1,203 @@
+/* main.css -- Default LibrePoll css style.
+ *
+ * Copyright (C) 2019 by Pierre-Antoine Rouby <contact@parouby.fr>
+ */
+
+html {
+    font-size: 1.30em;
+    color: #212121;
+    background-color: #fcfcff;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+    margin: 0px;
+}
+
+h1 {
+    color: #8742ba;
+    text-align: center;
+    margin: 0px;
+    padding: 15px;
+}
+
+a {
+    color: #8742ba;
+}
+
+a:hover {
+    color: #5c5c5c;
+}
+
+p {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+table {
+    margin: auto;
+    padding: 5px;
+    width: 100%;
+    text-align: center;
+    margin-top: 15px;
+}
+
+table.main {
+    border: 1px solid #444444;
+    border-radius: 5px;
+    margin: auto;
+    margin-top: 15px;
+    width: 60%;
+    padding: 5px;
+    text-align: center;
+    box-shadow: 3px 3px 5px #444444;
+}
+
+input {
+    margin-top: 5px;
+}
+
+textarea {
+    margin-top: 5px;
+    width: 100%;
+}
+
+th, td {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+code {
+    /* Color */
+    color: #fcfcff;
+    background-color: #212121;
+    /* Block display */
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 15px;
+    box-shadow: 3px 3px 5px #444444;
+    border-radius: 5px;
+    /* Font */
+    font-size: small;
+    font-family: "Lucida Console", monospace;
+}
+
+img {
+    padding: 5%;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    box-shadow: 3px 3px 5px #444444;
+}
+
+header {
+    background-color: #fcfcff;
+    position: sticky;
+    top: 0;
+    border-bottom: 1px dashed #5c5c5c;
+}
+
+footer {
+    width: 100%;
+    bottom: 0px;
+    padding: 5px;
+    position: fixed;
+    text-align: center;
+    font-size: 0.70em;
+    background-color: #fcfcff;
+    border-top: 1px dashed #5c5c5c;
+}
+
+/* svg */
+svg {
+    padding: 5px;
+}
+
+#svg_path_0 {
+    fill: #8742ba;
+}
+
+#svg_path_1 {
+    fill: #3c3c3c;
+}
+
+#svg_path_2 {
+    fill: #5c5c5c;
+}
+
+#svg_path_3 {
+    fill: #7c7c7c;
+}
+
+#svg_path_4 {
+    fill: #9c9c9c;
+}
+
+#svg_path_5 {
+    fill: #acacac;
+}
+
+#svg_path_6 {
+    fill: #bcbcbc;
+}
+
+#svg_path_7 {
+    fill: #cccccc;
+}
+
+#svg_path_8 {
+    fill: #dcdcdc;
+}
+
+/* Class */
+.core {
+    padding-bottom: 200px;
+    margin-left: 15%;
+    margin-right: 15%;
+    min-width: 700px;
+}
+
+.option {
+    width: 100%;
+    text-align: center;
+}
+
+.link {
+    width: 100%;
+    text-align: center;
+}
+
+.result {
+    font-weight: bold;
+}
+
+.result-maj {
+    color: #8742ba;
+    font-weight: bold;
+}
+
+.name {
+    border-bottom: 1px dashed #5c5c5c;
+}
+
+.description {
+    text-align: justify;
+    border-bottom: 1px dashed #5c5c5c;
+}
+
+/* Code highlight */
+special {
+    color: #8742ba;
+    font-weight: bold;
+}
+
+string {
+    color: #70a0f2;
+}
+
+comment {
+    color: #acacac;
+    font-style: italic;
+}
