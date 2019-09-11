@@ -430,6 +430,11 @@ format."
         (let ((acc (cons (svg-path x1 y1 x2 y2 c a) acc)))
           (make-paths x2 y2 rest (+ a accp)
                       (+ 1 c) acc)))))))
+(define make-circle
+  `((circle (@ (cx "0")
+               (cy "0")
+               (r  "1")
+               (id "svg_path_0")))))
 
 (define (make-pie-chart percent-lst)
   "Make sxml svg pie chart from list of precentage PRENCET-LST between 0 and
@@ -440,7 +445,9 @@ format."
             (style "transform: rotate(-0.25turn)")
             (xmlns "http://www.w3.org/2000/svg")
             (xmlns "http://www.w3.org/1999/xlink"))
-         ,(make-paths 1 0 percent-lst 0 0 '()))))
+         ,(if (= (length percent-lst) 1)
+              make-circle
+              (make-paths 1 0 percent-lst 0 0 '())))))
 
 ;;;
 ;;; Render
