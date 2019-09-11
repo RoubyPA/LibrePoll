@@ -28,6 +28,11 @@
              (srfi srfi-28)
              (srfi srfi-11)
              (rnrs sorting)
+             ;; LibrePoll
+             (librepoll tools)
+             (librepoll chart)
+             (librepoll sql)
+             (librepoll create-db)
              ;; Html & Markdown
              (sxml simple)
              (commonmark)
@@ -57,27 +62,6 @@
 (if (or (string= "--help" (car (last-pair (command-line))))
         (string= "-h" (car (last-pair (command-line)))))
     (using))
-
-;;;
-;;; String tools
-;;;
-
-(define (substitute str old new)
-  "Replace OLD with NEW in STR."
-  (let ((vstr (string-match old str)))
-    (if (not (equal? vstr #f))
-        (match (vector-ref vstr 1)
-          ((s . e)
-           (substitute (string-replace str new s e)
-                       old new))
-          (x
-           (throw 'substitute-error '(str old new))))
-        str)))
-
-(define (sxml->xml-string sxml)
-  (call-with-output-string
-    (lambda (port)
-      (sxml->xml sxml port))))
 
 ;;;
 ;;; Configuration
@@ -131,6 +115,7 @@
 (define THEME    (conf-ref conf "theme"))
 (define COMMENT  (conf-ref conf "comment"))
 
+
 ;;;
 ;;; Log
 ;;;
@@ -158,74 +143,6 @@
 ;;; DB file
 ;;;
 
-(define (create-db db file)
-  (define (sql-request sql)
-    (log (format "createdb: ~a" sql))
-    (let ((stmt (sqlite-prepare db sql)))
-        (sqlite-fold cons '() stmt)))
-
-  (sql-request
-   "CREATE TABLE IF NOT EXISTS poll (
-     id INTEGER PRIMARY KEY,
-     name CHARACTER(50) NOT NULL,
-     description TEXT,
-     creation_date TIME NOT NULL
-   );")
-
-  (sql-request
-   "CREATE TABLE IF NOT EXISTS option (
-     id INTEGER PRIMARY KEY,
-     poll INTEGER NOT NULL,
-     name VARCHAR(64) NOT NULL,
-     FOREIGN KEY(poll) REFERENCES poll(id)
-   );")
-
-  (sql-request
-   "CREATE TABLE IF NOT EXISTS vote (
-     id INTEGER PRIMARY KEY,
-     date TIME NOT NULL,
-     poll INTEGER NOT NULL,
-     option INTEGER NOT NULL,
-     metadata TEXT NOT NULL,
-     FOREIGN KEY(option) REFERENCES option(id),
-     FOREIGN KEY(poll) REFERENCES poll(id)
-   );")
-
-  (sql-request
-   (format "INSERT INTO poll (id,name,description,creation_date)
-     VALUES (
-       1,
-       'Do you like this software ?',
-       '~a',
-       DATETIME('now') );"
-           "This program is free software, licensed under
-[AGPL](http://www.gnu.org/licenses/).
-
-```
-This program is free software: you can redistribute it and/or
-modify it under the terms of the GNU Affero General Public License as
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public
-License along with this program.  If not, see
-<http://www.gnu.org/licenses/>.
-```
-"))
-
-  (sql-request
-   "INSERT INTO option (poll,name)
-     VALUES (1, 'Yes');")
-
-  (sql-request
-   "INSERT INTO option (poll,name)
-     VALUES (1, 'Non');"))
-
 (define default-db
   (let* ((file  DB-FILE)
          (file? (file-exists? file))
@@ -237,60 +154,8 @@ License along with this program.  If not, see
         db)))))
 
 ;;;
-;;; Syntax
+;;; SQL request
 ;;;
-
-(define-syntax-rule (define-sql-request name DOCSTRING parser sql)
-  "Create new procedure named NAME. If PARSER is a procedure,
-wrap the defaut returns, else do nothing. SQL is sql request in string
-format."
-  (define* (name #:optional (args '()))
-    DOCSTRING
-    (let* ((core (if (null-list? args)
-                     (lambda ()
-                       (log (format "sql: ~a" sql))
-                       (exec-sql->list default-db sql))
-                     (lambda ()
-                       (let* ((l (map (lambda (s)
-                                         (if (string? s)
-                                             (substitute s "'"
-                                                         "&apos;")
-                                             s))
-                                      args))
-                              (str (apply format (cons sql l))))
-                         (log (format "sql: ~a" str))
-                         (exec-sql->list default-db str)))))
-           ;; Wrap core with parser if parser is define.
-           (exec (cond
-                  ((procedure? parser)
-                   (lambda ()
-                     (parser (core))))
-                  (else
-                   core))))
-      (exec))))
-
-;;;
-;;; Tools
-;;;
-
-(define (decode-post-uri-body body)
-  "Decode and split BODY in uri format. Return list of alist."
-  (map (lambda (l)
-         (car (acons (list-ref l 0) (uri-decode (list-ref l 1)) '())))
-       (map (lambda (s)
-              (string-split s #\=))
-            (string-split (utf8->string body) #\&))))
-
-(define (percent num total)
-  (cond
-   ((zero? total) 0)
-   (else
-    (let ((cur (* (/ num total) 100.0)))
-      (/ (round (* cur 100)) 100.0)))))
-
-(define (random-number)
-  (random (+ (vector-ref (times) 0)
-             (vector-ref (times) 1))))
 
 (define (exec-sql->list db sql)
   (define (vector-list->list vl)
@@ -301,10 +166,6 @@ format."
 
   (let ((stmt (sqlite-prepare db sql)))
     (vector-list->list (sqlite-fold cons '() stmt))))
-
-;;;
-;;; SQL request
-;;;
 
 (define-sql-request
   sql-vote-count
@@ -389,65 +250,6 @@ format."
   "INSERT INTO option (poll,name)
      VALUES(~s, ~s);")
 
-
-;;;
-;;; Pie chart
-;;;
-
-(define PI 3.141592653589793)
-
-(define (percentage->coordinate percent)
-  "Percentage PERCENT to coordinate '(x y)."
-  (let* ((var (* 2 PI percent))
-         (x (cos var))
-         (y (sin var)))
-    `(,x ,y)))
-
-(define (svg-line x1 y1 percent color)
-  (match (percentage->coordinate percent)
-    ((x y)
-     `((line (@ (x1 ,x1) (y1 ,y1)
-                (x2 ,(+ x1 x)) (y2 ,(+ y1 y))
-                (stroke-width "0.05")
-                (fill "transparent")
-                (stroke ,color)))))))
-
-(define (svg-path x1 y1 x2 y2 c p)
-  `((path (@ (d ,(icef:format #f "M ~5f ~5f A 1 1 0 ~a 1 ~5f ~5f L 0 0"
-                              (number->string x1)
-                              (number->string y1)
-                              (if (> p 0.5) 1 0)
-                              (number->string x2)
-                              (number->string y2)))
-             (id ,(format "svg_path_~a" c))))))
-
-(define (make-paths x1 y1 p accp c acc)
-  (match p
-    (() acc)
-    ((a . rest)
-     (match (percentage->coordinate (+ a accp))
-       ((x2 y2)
-        (let ((acc (cons (svg-path x1 y1 x2 y2 c a) acc)))
-          (make-paths x2 y2 rest (+ a accp)
-                      (+ 1 c) acc)))))))
-(define make-circle
-  `((circle (@ (cx "0")
-               (cy "0")
-               (r  "1")
-               (id "svg_path_0")))))
-
-(define (make-pie-chart percent-lst)
-  "Make sxml svg pie chart from list of precentage PRENCET-LST between 0 and
-1."
-  `((svg (@ (width "200px")
-            (height "200px")
-            (viewBox "-1 -1 2 2")
-            (style "transform: rotate(-0.25turn)")
-            (xmlns "http://www.w3.org/2000/svg")
-            (xmlns "http://www.w3.org/1999/xlink"))
-         ,(if (= (length percent-lst) 1)
-              make-circle
-              (make-paths 1 0 percent-lst 0 0 '())))))
 
 ;;;
 ;;; Render

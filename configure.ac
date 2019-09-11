@@ -23,7 +23,7 @@ AC_SUBST([guileobjectdir])
 AC_SUBST([guile])
 
 AC_CONFIG_FILES([Makefile])
-AC_CONFIG_FILES([librepoll])
+AC_CONFIG_FILES([run])
 AC_CONFIG_FILES([pre-inst-env], [chmod +x pre-inst-env])
 
 AC_OUTPUT

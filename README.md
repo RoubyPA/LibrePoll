@@ -49,13 +49,13 @@ $ guix package -f guix
 Before installation.
 
 ```shell
-$ ./pre-inst-env librepoll [CONFIGFILE]
+$ ./pre-inst-env run [CONFIGFILE]
 ```
 
 After installation.
 
 ```shell
-$ librepoll [CONFIGFILE]
+$ run-librepoll [CONFIGFILE]
 ```
 
 

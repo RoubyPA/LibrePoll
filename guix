@@ -62,7 +62,7 @@
                                 deps)
                            ":")))
              ;; Wrap prog
-             (wrap-program (string-append bin "/librepoll")
+             (wrap-program (string-append bin "/run-librepoll")
                `("GUILE_LOAD_PATH" ":" prefix (,path))
                `("GUILE_LOAD_COMPILED_PATH" ":" prefix (,gopath))
                `("LIBREPOLL_ASSETS_DIR" ":" prefix (,shr)))
