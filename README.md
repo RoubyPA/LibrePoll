@@ -4,9 +4,15 @@ LibrePoll
 Free opinion poll service.
 
 
-LibrePoll provide a web interface to create opinion poll with Markdown
-description.
+## Features
 
+ - Web interface
+ - Rest API
+ - JSON configuration file
+ - One file database (sqlite3)
+ - Create poll with personalized multiple choice
+ - Vote secured by cookies
+ - No personal information storage
 
 ![example](/doc/example.png)
 
@@ -15,6 +21,7 @@ description.
 
  - Guile >= 2.2
  - Guile-json
+ - SQLite3
  - Guile-sqlite3
  - Guile-commonmark
 
@@ -59,14 +66,14 @@ configuation file.
 
 | Options  | Usage                                                       |
 |----------|-------------------------------------------------------------|
-| db       | Database file                                               |
+| db       | Database file path                                          |
 | host     | Host name (use for display)                                 |
-| port     | Http server port                                            |
+| port     | HTTP server port                                            |
 | security | Type of security (at this time just cookies is implemented) |
 | api      | Make api available ("true" or "false")                      |
 | ui       | Make ui available ("true" or "false")                       |
 | stdout   | Display log in stdout ("true" or "false")                   |
-| log      | Log file                                                    |
+| log      | Log file path                                               |
 | title    | Page title                                                  |
 | theme    | Theme to use in html (default, blue, purple, none)          |
 | comment  | Message to display in the index page (Markdown)             |
@@ -112,7 +119,7 @@ Get instance poll by `:id`.
 | description | Description of poll | String (markdown) |
 | options     | List of options     | List              |
 
-### `GET /api/vote/:poll/:opt`
+### `GET /api/v1/vote/:poll/:opt`
 
 New vote for `:poll` and `:opt` (option id).
 
