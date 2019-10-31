@@ -26,22 +26,23 @@
   "Create new procedure named NAME. If PARSER is a procedure,
 wrap the defaut returns, else do nothing. SQL is sql request in string
 format."
-  (define* (name #:optional (args '()))
+  (define* (name db #:optional (args '()))
     DOCSTRING
     (let* ((core (if (null-list? args)
                      (lambda ()
                        ;; (log (format "sql: ~a" sql))
-                       (exec-sql->list default-db sql))
+                       (exec-sql->list db sql))
                      (lambda ()
-                       (let* ((l (map (lambda (s)
-                                         (if (string? s)
-                                             (substitute s "'"
-                                                         "&apos;")
-                                             s))
-                                      args))
+                       (let* ((l (map
+                                  (lambda (s)
+                                    (if (string? s)
+                                        (substitute s "'"
+                                                    "&apos;")
+                                        s))
+                                  args))
                               (str (apply format (cons sql l))))
-                         ;; (log (format "sql: ~a" str))
-                         (exec-sql->list default-db str)))))
+                         ;; (log (format "sql: ~s\n" str))
+                         (exec-sql->list db str)))))
            ;; Wrap core with parser if parser is define.
            (exec (cond
                   ((procedure? parser)

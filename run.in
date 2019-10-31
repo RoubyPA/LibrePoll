@@ -21,18 +21,21 @@
 
 (use-modules (ice-9 match)
              (ice-9 regex)
-             (ice-9 popen)
-             (ice-9 rdelim)
              ((ice-9 format) #:prefix icef:)
              (srfi srfi-1)
-             (srfi srfi-28)
              (srfi srfi-11)
+             (srfi srfi-28)
+             (srfi srfi-69)
              (rnrs sorting)
              ;; LibrePoll
+             (librepoll options)
+             (librepoll error)
              (librepoll tools)
              (librepoll chart)
              (librepoll sql)
+             (librepoll sql-request)
              (librepoll create-db)
+             (librepoll render)
              ;; Html & Markdown
              (sxml simple)
              (commonmark)
@@ -54,10 +57,6 @@
   (display (format "Usage: ~a [CONFIG]\n" (car (command-line))))
   (exit -1))
 
-(define (abort-with-msg msg)
-  (display (format "Error: ~a\n" msg))
-  (exit -1))
-
 ;;; Help
 (if (or (string= "--help" (car (last-pair (command-line))))
         (string= "-h" (car (last-pair (command-line)))))
@@ -67,54 +66,10 @@
 ;;; Configuration
 ;;;
 
-(define share-path
-  (let ((dir (getenv "LIBREPOLL_ASSETS_DIR")))
-    (if (string? dir)
-        dir
-        "")))
-
-(define (file-content path)
-  "Returns PATH file-content as string."
-  (define (aux port)
-    (let ((line (read-line port)))
-      (if (string? line)
-          (string-append line (aux port))
-          "")))
-
-  (let* ((port (open-input-file path))
-         (file (aux port)))
-    (close-port port)
-    file))
-
-(define conf
-  (let ((conf-file (if (>= (length (command-line)) 2)
-                       (car (last-pair (command-line)))
-                       "librepoll.json")))
-    (if (file-exists? conf-file)
-        (let ((json (file-content conf-file)))
-          (json-string->scm json))
-        (abort-with-msg "No config file"))))
-
-(define (conf-ref conf key)
-  "Use 'hash-ref' if CONF is hash-table, else 'assoc-ref'."
-  (cond
-   ((hash-table? conf)
-    (hash-ref conf key))
-   (else
-    (assoc-ref conf key))))
-
-(define DB-FILE  (conf-ref conf "db"))
-(define HOST     (conf-ref conf "host"))
-(define PORT     (conf-ref conf "port"))
-(define SECURITY (conf-ref conf "security"))
-(define API      (string= (conf-ref conf "api") "true"))
-(define UI       (string= (conf-ref conf "ui")  "true"))
-(define LOG-FILE (conf-ref conf "log"))
-(define STDOUT   (string= (conf-ref conf "stdout") "true"))
-(define TITLE    (conf-ref conf "title"))
-(define THEME    (conf-ref conf "theme"))
-(define COMMENT  (conf-ref conf "comment"))
-
+(define config (get-options-ht
+                (if (equal? (length (command-line)) 2)
+                    (list-ref (command-line) 1)
+                    "librepoll.json")))
 
 ;;;
 ;;; Log
@@ -122,18 +77,18 @@
 
 (define log
   (let ((lfile
-         (let ((port (open-output-file LOG-FILE)))
+         (let ((port (open-output-file (hash-table-ref config 'log-file))))
            (lambda (message)
              (let ((lines (string-split message #\newline)))
-               (map  (lambda (l)
-                       (write-line
-                        (format "~a librepoll: ~a"
-                                (strftime "%b %d %H:%M:%S"
-                                          (localtime (current-time)))
-                                l)
-                        port))
-                     lines))))))
-    (if STDOUT
+               (map (lambda (msg)
+                      (display
+                       (format "~a librepoll: ~a\n"
+                               (strftime "%b %d %H:%M:%S"
+                                         (localtime (current-time)))
+                               msg)
+                       port))
+                    lines))))))
+    (if (hash-table-ref config 'stdout)
         (lambda (message)
           (display (format "~a\n" message))
           (lfile message))
@@ -144,286 +99,13 @@
 ;;;
 
 (define default-db
-  (let* ((file  DB-FILE)
-         (file? (file-exists? file))
-         (db    (sqlite-open  file)))
+  (let* ((file (hash-table-ref config 'db-file))
+         (db   (sqlite-open  file)))
     (cond
-     (file? db)
+     ((file-exists? file) db)
      (else
       (let ((ok (create-db db file)))
         db)))))
-
-;;;
-;;; SQL request
-;;;
-
-(define (exec-sql->list db sql)
-  (define (vector-list->list vl)
-    (cond
-     ((vector? vl) (vector->list vl))
-     ((list? vl)   (map vector->list vl))
-     (else #f)))
-
-  (let ((stmt (sqlite-prepare db sql)))
-    (vector-list->list (sqlite-fold cons '() stmt))))
-
-(define-sql-request
-  sql-vote-count
-  "Returns number of all vote in db."
-  (lambda (l) (caar l))
-  "SELECT COUNT(*) FROM vote;")
-
-(define-sql-request
-  sql-poll-count
-  "Returns number of all poll in db."
-  (lambda (l) (caar l))
-  "SELECT COUNT(*) FROM poll;")
-
-(define-sql-request
-  sql-vote-number-by-poll
-  "Count all vote for poll."
-  (lambda (l) (caar l))
-  "SELECT COUNT(*) FROM vote WHERE poll = ~a;")
-
-(define-sql-request
-  sql-polls
-  "Returns list of all poll in db."
-  'nil
-  "SELECT id,name,description FROM poll;")
-
-(define-sql-request
-  sql-poll-by-id
-  "Returns poll coresponding to ID in db."
-  (lambda (l) (car l))
-  "SELECT name,description FROM poll WHERE id = ~a;")
-
-(define-sql-request
-  sql-poll-by-name
-  "Returns poll id."
-  (lambda (l) (caar l))
-  "SELECT id FROM poll WHERE name = ~s;")
-
-(define-sql-request
-  sql-options-for-poll
-  "Returns list contain poll for first element of list."
-  (lambda (l) (reverse l))
-  "SELECT id,name FROM option WHERE poll = ~a;")
-
-(define-sql-request
-  sql-vote-for-poll
-  "Returns list of all vote for poll."
-  'nil
-  "SELECT id,option,date,metadata FROM vote WHERE poll = ~a;")
-
-(define-sql-request
-  sql-vote-num-for-option
-  "Returns count of vote for poll."
-  (lambda (l) (caar l))
-  "SELECT COUNT(*) FROM vote WHERE vote.option = ~a;")
-
-(define-sql-request
-  sql-vote-exist?
-  "Returns true if vote already exists."
-  (lambda (l) (not (zero? (caar l))))
-  "SELECT COUNT(*) FROM vote
-     WHERE vote.poll = ~a AND
-           vote.metadata = ~s;")
-
-(define-sql-request
-  sql-vote
-  "Insert new vote in db."
-  'nil
-  "INSERT INTO vote (date, poll, option, metadata)
-     VALUES (DATETIME('now'), ~a, ~a, ~s);")
-
-(define-sql-request
-  sql-create-poll
-  "Insert new poll in db."
-  'nil
-  "INSERT INTO poll (name,description,creation_date)
-     VALUES(~s, '~a' ,DATETIME('now'));")
-
-(define-sql-request
-  sql-create-option-for-poll
-  "Insert new poll option in db."
-  'nil
-  "INSERT INTO option (poll,name)
-     VALUES(~s, ~s);")
-
-
-;;;
-;;; Render
-;;;
-
-(define (sxml->html sxml)
-  (let ((page `((html
-                 (head
-                  (meta (@ (charset "utf-8")))
-                  (title ,TITLE)
-                  (link (@ (rel "stylesheet")
-                           (href ,(string-append "/assets/" THEME "/main.css")))))
-                 (body
-                  ,sxml
-                  (footer
-                   (strong "LibrePoll")
-                   (br)
-                   "License: "
-                   (a (@ (href
-                          "https://www.gnu.org/licenses/agpl-3.0.txt"))
-                      "AGPL")
-                   (br)
-                   "Source code: "
-                   (a (@ (href
-                          "https://framagit.org/prouby/librepoll"))
-                      "Framagit")
-                   (br)))))))
-    (let ((html (call-with-output-string
-                  (lambda (port)
-                    (sxml->xml page port)))))
-      html)))
-
-(define (poll-info id)
-  (let* ((poll (sql-poll-by-id `(,id)))
-         (name (list-ref poll 0))
-         (desc (list-ref poll 1)))
-    (values name desc)))
-
-(define (render-page-index)
-  (if (file-exists? "index.html")
-      (file-content "index.html")
-      (sxml->html `((header
-                     (h1 "Welcome in LibrePoll !"))
-                    (div (@ (class "core"))
-                         (div (@ (class "description"))
-                              ,(commonmark->sxml COMMENT))
-                         (h2 "Create new poll")
-                         (ul
-                          (li (a (@ (href ,(string-append HOST "/create")))
-                                 "Click here")))
-                         (h2 "Statistique")
-                         (p "There are " (strong ,(sql-vote-count) " votes")
-                            " on this instance." (br)
-                            "There are " (strong ,(sql-poll-count) " polls")
-                            " on this instance."))))))
-
-(define (render-page-create-poll-get)
-  (sxml->html `((header (h1 "Create new poll"))
-                (div (@ (class "core"))
-                     (form
-                      (@ (action "/create")
-                         (method "post"))
-                      (table (tr (td
-                                  "Name" (br)
-                                  (input (@ (type "text")
-                                            (name "name")))))
-                             (tr (td
-                                  "Description" (br)
-                                  (textarea (@ (name "description")
-                                               (rows "24"))
-                                            "")))
-                             (tr (td (input (@ (type "submit")
-                                               (value "Submit")))))))))))
-
-(define (render-page-add-option poll)
-  (let ((options (sql-options-for-poll `(,poll))))
-    (sxml->html
-     `((header (h1 "Add options"))
-       (div (@ (class "core"))
-            ,(map (lambda (l) `(div (@ (class "option"))
-                                    ,(substitute (cadr l) "&apos;"
-                                                 "'")))
-                  options)
-            (form
-             (@ (action ,(string-append "/add_option/" poll))
-                (method "post"))
-             (table (tr
-                     (td "Option")
-                     (td (input (@ (type "text")
-                                   (name "name"))))
-                     (td (input (@ (type "submit")
-                                   (value "+")))))))
-            (div (@ (class "link"))
-                 (h2 (a
-                      (@ (href ,(string-append HOST "/poll/" poll)))
-                      ,(string-append HOST
-                                      "/poll/" poll)))))))))
-
-(define (render-page-result poll)
-  (let-values (((name desc) (poll-info poll)))
-    (let* ((total (sql-vote-number-by-poll (list poll)))
-           (fn (lambda (l)
-                 (let* ((num (sql-vote-num-for-option
-                              `(,(car l))))
-                        (perc (percent num total))
-                        (perc-str (string-append (number->string perc) "%")))
-                   `((tr (td (div (@ (class ,(if (> perc 50)
-                                                 "result-maj"
-                                                 "result")))
-                                  ,(substitute (cadr l) "&apos;" "'")))
-                         (td ,num)
-                         (td (div (@ (class ,(if (> perc 50)
-                                                 "result-maj"
-                                                 "result")))
-                                  ,perc-str)))))))
-           (pl (lambda (l)
-                 (let* ((num (sql-vote-num-for-option
-                              `(,(car l)))))
-                   (/ (percent num total) 100.0))))
-           (opts (sql-options-for-poll `(,poll)))
-           (opts-sorted (list-sort (lambda (x y)
-                                     (let ((num-x (sql-vote-num-for-option
-                                                   `(,(car x))))
-                                           (num-y (sql-vote-num-for-option
-                                                   `(,(car y)))))
-                                       (> num-x num-y)))
-                                   opts))
-           (opth (map fn opts-sorted))
-           (percent-lst (map pl opts-sorted)))
-      (sxml->html `((header (h1 ,name))
-                    (div (@ (class "core"))
-                         (div (@ (class "description"))
-                              ,(commonmark->sxml desc))
-                         (table
-                          (@ (class "main"))
-                          (tr
-                           (td
-                            (table
-                             (tr
-                              (th (em "Options"))
-                              (th (em "Votes"))
-                              (th (em "Results")))
-                             ,opth))
-                           (td
-                            ,(make-pie-chart (remove zero?
-                                                     percent-lst)))))))))))
-
-(define (render-page-poll id)
-  (let* ((fn (lambda (l)
-               `(tr
-                 (td (input (@ (type "radio")
-                               (name "vote")
-                               (value ,(car l)))
-                            ,(substitute (cadr l) "&apos;" "'"))))))
-         (poll (sql-poll-by-id `(,id)))
-         (name (list-ref poll 0))
-         (desc (list-ref poll 1))
-         (opts (sql-options-for-poll `(,id)))
-         (opth (map fn opts)))
-    (sxml->html
-     `((header (h1 ,name))
-       (div (@ (class "core"))
-            (div (@ (class "description"))
-                 ,(commonmark->sxml desc))
-            (form
-             (@ (action
-                 ,(string-append
-                   "/result/" id))
-                (method "post"))
-             (table
-              ,opth
-              (tr
-               (td (input (@ (type  "submit")
-                             (value "Vote"))))))))))))
 
 ;;;
 ;;; Cookies !
@@ -498,8 +180,8 @@
                        (else ""))))
   (values `((content-type . (text/html))
             (status . ,code))
-          (sxml->html `(h1 ,(string-append
-                             code " - " message)))))
+          (sxml->html config `(h1 ,(string-append
+                                    code " - " message)))))
 
 (define-syntax-rule (define-handler-matcher name bool fun)
   "Define new function NAME coresponding to FUN if BOOL is true. Else
@@ -511,7 +193,7 @@ define function NAME who returns error."
           (ret-error path "404" "Not found")))))
 
 (define-handler-matcher get-api
-  API
+  (hash-table-ref config 'api)
   (lambda (path request-body cookies)
     (match path
       ;; api/v1/status
@@ -519,21 +201,21 @@ define function NAME who returns error."
        (values (json-headers cookies)
                (scm->json-string `(("status"  . "OK")
                                    ("license" . "AGPL")
-                                   ("host"    . ,HOST)
-                                   ("votes"   . ,(sql-vote-count))
-                                   ("polls"   . ,(sql-poll-count))))))
+                                   ("host"    . ,(hash-table-ref config 'host))
+                                   ("votes"   . ,(sql-vote-count default-db))
+                                   ("polls"   . ,(sql-poll-count default-db))))))
       ;; api/v1/poll/:id
       (("api" "v1" "poll" id)
-       (let* ((total (sql-vote-number-by-poll `(,id)))
+       (let* ((total (sql-vote-number-by-poll default-db `(,id)))
               (fn (lambda (l)
                     (let* ((oid  (list-ref l 0))
                            (otxt (list-ref l 1))
-                           (num  (sql-vote-num-for-option `(,oid))))
+                           (num  (sql-vote-num-for-option default-db (list oid))))
                       `(,oid ,(substitute otxt "&apos;" "'") ,num))))
-              (poll (sql-poll-by-id `(,id)))
+              (poll (sql-poll-by-id default-db (list id)))
               (name (list-ref poll 0))
               (desc (list-ref poll 1))
-              (opts (sql-options-for-poll `(,id)))
+              (opts (sql-options-for-poll default-db (list id)))
               (options (map fn opts)))
          (values (json-headers cookies)
                  (scm->json-string `(("name" . ,name)
@@ -546,8 +228,8 @@ define function NAME who returns error."
       ;; api/v1/vote/:poll/:opt
       (("api" "v1" "vote" poll opt)
        (let* ((cookie (cookie-auth cookies))
-              (vote (if (not (sql-vote-exist? `(,poll ,cookie)))
-                        (sql-vote `(,poll ,opt ,cookie)))))
+              (vote (if (not (sql-vote-exist? default-db (list poll cookie)))
+                        (sql-vote default-db (list poll opt cookie)))))
          (values (json-headers cookies)
                  (scm->json-string `(("status" . "Ok"))))))
       ;; Else
@@ -555,7 +237,7 @@ define function NAME who returns error."
        (ret-error path "404" "Not found")))))
 
 (define-handler-matcher post-api
-  API
+  (hash-table-ref config 'api)
   (lambda (path request-body cookies)
     (match path
       ;; TODO: API v1 POST
@@ -563,7 +245,7 @@ define function NAME who returns error."
        (ret-error path "404" "Not found")))))
 
 (define-handler-matcher get-ui
-  UI
+  (hash-table-ref config 'ui)
   (lambda (path request-body cookies)
     (match path
       ;; /index.html or /
@@ -571,7 +253,7 @@ define function NAME who returns error."
            ("")
            ())
        (values (html-headers cookies)
-               (render-page-index)))
+               (render-page-index config default-db)))
       ;; /assets/:theme/:file
       (("assets" theme file)
        (let ((ct (content-type file))
@@ -583,21 +265,21 @@ define function NAME who returns error."
       ;; /result/:poll-id
       (("result" poll)
        (values (html-headers cookies)
-               (render-page-result poll)))
+               (render-page-result poll config default-db)))
       ;; /poll/:poll-id
       (("poll" id)
        (values (html-headers cookies)
-               (render-page-poll id)))
+               (render-page-poll id config default-db)))
       ;; /create
       (("create")
        (values (html-headers cookies)
-               (render-page-create-poll-get)))
+               (render-page-create-poll-get config default-db)))
       ;; Else
       (x
        (ret-error path "404" "Not found")))))
 
 (define-handler-matcher post-ui
-  UI
+  (hash-table-ref config 'ui)
   (lambda (path request-body cookies)
     (match path
       ;; /vote/:poll-id
@@ -605,18 +287,18 @@ define function NAME who returns error."
        (let* ((body (decode-post-uri-body request-body))
               (id   (assoc-ref body "vote"))
               (cookie (cookie-auth cookies))
-              (vote (if (not (sql-vote-exist? `(,poll ,cookie)))
-                        (sql-vote `(,poll ,id ,cookie)))))
+              (vote (if (not (sql-vote-exist? default-db (list poll cookie)))
+                        (sql-vote default-db (list poll id cookie)))))
          (values (html-headers cookies cookie)
-                 (render-page-result poll))))
+                 (render-page-result poll config default-db))))
       ;; /add_option/:poll-id
       (("add_option" poll)
        (let* ((body (decode-post-uri-body request-body))
               (name (assoc-ref body "name"))
-              (sql-return (sql-create-option-for-poll `(,poll ,name)))
-              (options (sql-options-for-poll `(,poll))))
+              (sql-return (sql-create-option-for-poll default-db (list poll name)))
+              (options (sql-options-for-poll default-db (list poll))))
          (values (html-headers cookies)
-                 (render-page-add-option poll))))
+                 (render-page-add-option poll config default-db))))
       ;; /create
       (("create")
        (let* ((body (decode-post-uri-body request-body))
@@ -624,13 +306,13 @@ define function NAME who returns error."
               (desc (assoc-ref body "description")))
          (if (string-null? name)
              (values (html-headers cookies)
-                     (render-page-create-poll-get))
-             (let* ((sql-return (sql-create-poll
-                                 `(,name
-                                   ,desc)))
-                    (id (sql-poll-by-name `(,name))))
+                     (render-page-create-poll-get config default-db))
+             (let* ((sql-return (sql-create-poll default-db
+                                                 (list name desc)))
+                    (id (sql-poll-by-name default-db (list name))))
                (values (html-headers cookies)
-                       (render-page-add-option (number->string id)))))))
+                       (render-page-add-option (number->string id)
+                                               config default-db))))))
       (x
        (ret-error path "404" "Not found")))))
 
@@ -672,7 +354,7 @@ define function NAME who returns error."
 ;;;
 
 (log "server: Start")
-(run-server my-handler 'http `(#:port ,PORT
+(run-server my-handler 'http `(#:port ,(hash-table-ref config 'port)
                                #:addr ,INADDR_ANY))
 
 ;;; End of file

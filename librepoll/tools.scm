@@ -17,7 +17,8 @@
             sxml->xml-string
             decode-post-uri-body
             percent
-            random-number))
+            random-number
+            file-content))
 
 (define (substitute str old new)
   "Replace OLD with NEW in STR."
@@ -37,7 +38,7 @@
       (sxml->xml sxml port))))
 
 (define (decode-post-uri-body body)
-  "Decode and split BODY in uri format. Return list of alist."
+  "Decode and split BODY in uri format. Return alist."
   (map (lambda (l)
          (car (acons (list-ref l 0) (uri-decode (list-ref l 1)) '())))
        (map (lambda (s)
@@ -54,3 +55,16 @@
 (define (random-number)
   (random (+ (vector-ref (times) 0)
              (vector-ref (times) 1))))
+
+(define (file-content path)
+  "Returns PATH file-content as string."
+  (define (aux port)
+    (let ((line (read-line port)))
+      (if (string? line)
+          (string-append line (aux port))
+          "")))
+
+  (let* ((port (open-input-file path))
+         (file (aux port)))
+    (close-port port)
+    file))

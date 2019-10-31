@@ -3,8 +3,12 @@ include guile.am
 SOURCES =					\
 	librepoll/chart.scm			\
 	librepoll/sql.scm			\
+	librepoll/sql-request.scm		\
 	librepoll/create-db.scm			\
-	librepoll/tools.scm
+	librepoll/tools.scm			\
+	librepoll/error.scm			\
+	librepoll/options.scm			\
+	librepoll/render.scm
 
 EXTRA_DIST =					\
 	README.org				\
